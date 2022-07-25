@@ -4,6 +4,9 @@ import numpy as np
 
 class ChessGame:
 
+    _COLORS = {-1: "black", 1: "white"}
+    _PIECES = {1: "pawn", 2: "knight", 3: "bishop", 4: "rook", 5: "queen", 6: "king"}
+
     def __init__(self):
         # Set instance attributes describing the game state to their initial values
         self._board: np.ndarray = self.new_board()  # Chessboard in starting position
