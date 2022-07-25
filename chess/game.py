@@ -100,12 +100,12 @@ class ChessGame:
         Optional[int]
             The score of white player if the game is over, `None` otherwise.
         """
-        if self.game_over:  # Return white's score if the game is over
-            return self.score
+        if self._game_over:  # Return white's score if the game is over
+            return self._score
         self.raise_for_illegal_move(s0=s0, s1=s1)  # Otherwise, raise an error if move is illegal
         self._update_game_state(s0=s0, s1=s1)  # Otherwise, apply the move and update state
-        if self.game_over:  # Return white's score if the game is over after the move
-            return self.score
+        if self._game_over:  # Return white's score if the game is over after the move
+            return self._score
         return
 
     def raise_for_illegal_move(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> None:
