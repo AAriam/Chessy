@@ -116,3 +116,7 @@ class ChessGame:
         board[0, :] = [4, 2, 3, 5, 6, 3, 2, 4]  # Set white's main pieces on row 1
         board[-1, :] = -board[0]  # Set black's main pieces on row 8
         return board
+
+
+class IllegalMoveError(Exception):
+    pass
