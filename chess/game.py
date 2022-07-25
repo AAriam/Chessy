@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, Optional
+from typing import Sequence, Tuple, Optional, Union
 import numpy as np
 
 
@@ -134,9 +134,9 @@ class ChessGame:
         if self.square_belongs_to_current_player(s=s1):
             raise IllegalMoveError("End-square occupied by current player's piece.")
         # For move beginning or leading outside the board
-        if self.square_is_outside_board(s=s0):
+        if not self.squares_are_inside_board(s=s0):
             raise IllegalMoveError("Start-square is out of board.")
-        if self.square_is_outside_board(s=s1):
+        if not self.squares_are_inside_board(s=s1):
             raise IllegalMoveError("End-square is out of board.")
         if self.move_results_in_own_check(s0=s0, s1=s1):
             raise IllegalMoveError("Move results in current player being checked.")
@@ -155,11 +155,24 @@ class ChessGame:
         return self._turn == np.sign(self._board[s])
 
     @staticmethod
-    def square_is_outside_board(s: Tuple[int, int]) -> bool:
+    def squares_are_inside_board(s: Union[Tuple[int, int], np.ndarray]) -> np.ndarray:
         """
-        Whether a given square lies outside of the chessboard.
+        Whether a number of given squares lie outside the chessboard.
+
+        Parameters
+        ----------
+        s : Union[Tuple[int, int], numpy.ndarray]
+          Either the indices of a single square (as a 2-tuple),
+          or multiple squares (as a 2d numpy array).
+
+        Returns
+        -------
+        numpy.ndarray
+          A 1d boolean array with same size as number of input squares.
         """
-        return True if max(s) > 7 or min(s) < 0 else False
+        if not isinstance(s, np.ndarray):
+            s = np.ndarray([s])
+        return np.all(np.all([s < 8, s > -1], axis=0), axis=1)
 
     def move_results_in_own_check(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
         """
