@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import Sequence, Tuple, Optional
 import numpy as np
 
 
@@ -80,6 +80,30 @@ class ChessGame:
         Before the game is over, the value defaults to 0.
         """
         return self._score
+
+    def move(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> Optional[int]:
+        """
+        Make a move for the current player.
+
+        Parameters
+        ----------
+        s0 : Sequence[int, int]
+            Row and column index of the start square (both from 0 to 7), respectively.
+        s1 : Sequence[int, int]
+            Row and column index of the end square (both from 0 to 7), respectively.
+
+        Returns
+        -------
+        Optional[int]
+            The score of white player if the game is over, `None` otherwise.
+        """
+        if self.game_over:  # Return white's score if the game is over
+            return self.score
+        self.raise_for_illegal_move(s0=s0, s1=s1)  # Otherwise, raise an error if move is illegal
+        self._update_game_state(s0=s0, s1=s1)  # Otherwise, apply the move and update state
+        if self.game_over:  # Return white's score if the game is over after the move
+            return self.score
+        return
 
     @staticmethod
     def new_board() -> np.ndarray:
