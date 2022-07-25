@@ -124,16 +124,40 @@ class ChessGame:
         IllegalMoveError
             When the move is not legal.
         """
+        # For moves starting from an empty square
+        if self.square_is_empty(s=s0):
+            raise IllegalMoveError("Start-square is empty.")
         # For wrong turn (i.e. it is one player's turn, but other player's piece is being moved)
-        if self._turn != np.sign(self._board[s0]):
+        if not self.square_belongs_to_current_player(s=s0):
             raise IllegalMoveError(f"It is {self._COLORS[self._turn]}'s turn.")
+        # For move ending in a square occupied by current player's own pieces
+        if self.square_belongs_to_current_player(s=s1):
+            raise IllegalMoveError("End-square occupied by current player's piece.")
         # For move beginning or leading outside the board
-        for idx, s in enumerate([s0, s1]):
-            if max(s) > 7 or min(s) < 0:
-                raise IllegalMoveError(
-                    f"{'Start-square' if idx==0 else 'End-square'} is out of board."
-                )
+        if self.square_is_outside_board(s=s0):
+            raise IllegalMoveError("Start-square is out of board.")
+        if self.square_is_outside_board(s=s1):
+            raise IllegalMoveError("End-square is out of board.")
         return
+
+    def square_is_empty(self, s: Tuple[int, int]) -> bool:
+        """
+        Whether a given square is empty.
+        """
+        return self._board[s] == 0
+
+    def square_belongs_to_current_player(self, s: Tuple[int, int]) -> bool:
+        """
+        Whether a given square has a piece on it belonging to the player in turn.
+        """
+        return self._turn == np.sign(self._board[s])
+
+    @staticmethod
+    def square_is_outside_board(s: Tuple[int, int]) -> bool:
+        """
+        Whether a given square lies outside of the chessboard.
+        """
+        return True if max(s) > 7 or min(s) < 0 else False
 
     @staticmethod
     def new_board() -> np.ndarray:
