@@ -192,6 +192,29 @@ class ChessGame:
                 self.square_is_attacked_diagonal(s=s)
         )
 
+    def square_is_attacked_orthogonal(self, s: Tuple[int, int]) -> bool:
+        pass
+
+    def square_is_attacked_diagonal(self, s: Tuple[int, int]) -> bool:
+        pass
+
+    def square_is_attacked_by_knight(self, s: Tuple[int, int]) -> bool:
+        """
+        Whether a given square is attacked by one of opponent's knights.
+        """
+        # Take all possible relative moves (i.e. s1 - s0) for a knight
+        knight_moves = np.array(
+            [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]],
+            dtype=np.int8
+        )
+        # Add to given start square to get all possible end squares
+        knight_pos = s + knight_moves
+        # Take those end squares that are within the board
+        inboard_pos_mask = self.squares_are_inside_board(s=knight_pos)
+        inboard_knight_pos = knight_pos[inboard_pos_mask]
+        # Return whether an opponent's knight (knight = 2) is in one of the squares
+        return -self._turn * 2 in self._board[inboard_knight_pos[:, 0], inboard_knight_pos[:, 1]]
+
     @staticmethod
     def new_board() -> np.ndarray:
         """
