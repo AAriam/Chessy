@@ -108,6 +108,33 @@ class ChessGame:
             return self.score
         return
 
+    def raise_for_illegal_move(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> None:
+        """
+        Raise an IllegalMoveError if the given move is illegal.
+
+        Parameters
+        ----------
+        s0 : Sequence[int, int]
+            Row and column index of the start square (both from 0 to 7), respectively.
+        s1 : Sequence[int, int]
+            Row and column index of the end square (both from 0 to 7), respectively.
+
+        Raises
+        ------
+        IllegalMoveError
+            When the move is not legal.
+        """
+        # For wrong turn (i.e. it is one player's turn, but other player's piece is being moved)
+        if self._turn != np.sign(self._board[s0]):
+            raise IllegalMoveError(f"It is {self._COLORS[self._turn]}'s turn.")
+        # For move beginning or leading outside the board
+        for idx, s in enumerate([s0, s1]):
+            if max(s) > 7 or min(s) < 0:
+                raise IllegalMoveError(
+                    f"{'Start-square' if idx==0 else 'End-square'} is out of board."
+                )
+        return
+
     @staticmethod
     def new_board() -> np.ndarray:
         """
