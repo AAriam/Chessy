@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple, Optional
 import numpy as np
 
 
@@ -8,12 +8,12 @@ class ChessGame:
         # Set instance attributes describing the game state to their initial values
         self._board: np.ndarray = self.new_board()  # Chessboard in starting position
         self._turn: int = 1  # Whose turn it is; 1 for white, -1 for black
-        self._can_castle: np.ndarray = np.array([[1, 1], [1, 1]], dtype=np.int8)  # Castling
+        self._can_castle: np.ndarray = np.array([[0, 0], [1, 1], [1, 1]], dtype=np.int8)
         self._enpassant: int = -1  # Column where en passant capture is allowed in next move
         self._fifty_move_draw_count: int = 0  # Count for the fifty move draw rule
         # Set other useful instance attributes
         self._game_over: bool = False  # Whether the game is over
-        self._scores: np.ndarray = np.array([0, 0], dtype=np.int8)  # Score of each player
+        self._score: int = 0  # Score of white at the end of the game
         return
 
     @property
@@ -47,7 +47,7 @@ class ChessGame:
         Thus, e.g. `can_castle[0, 0]` corresponds to white's kingside castle.
         Each element is either 1 or 0, where 1 means allowed and 0 means not allowed.
         """
-        return self._can_castle
+        return self._can_castle[1:]
 
     @property
     def enpassant(self) -> int:
@@ -73,13 +73,13 @@ class ChessGame:
         return self._game_over
 
     @property
-    def scores(self) -> np.ndarray:
+    def score(self) -> int:
         """
-        Score of white and black at the end of the game, as a 1d-array of size 2.
+        Score of white at the end of the game.
         0 for draw, 1 for win, and -1 for loss.
-        Before the game is over, the values default to 0.
+        Before the game is over, the value defaults to 0.
         """
-        return self._scores
+        return self._score
 
     @staticmethod
     def new_board() -> np.ndarray:
