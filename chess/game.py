@@ -138,6 +138,8 @@ class ChessGame:
             raise IllegalMoveError("Start-square is out of board.")
         if self.square_is_outside_board(s=s1):
             raise IllegalMoveError("End-square is out of board.")
+        if self.move_results_in_own_check(s0=s0, s1=s1):
+            raise IllegalMoveError("Move results in current player being checked.")
         return
 
     def square_is_empty(self, s: Tuple[int, int]) -> bool:
@@ -158,6 +160,24 @@ class ChessGame:
         Whether a given square lies outside of the chessboard.
         """
         return True if max(s) > 7 or min(s) < 0 else False
+
+    def move_results_in_own_check(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
+        """
+        Whether a given move results in the player making the move to be checked.
+        """
+        if abs(self._board[s0]) == 6:  # If the piece being moved is a king
+            return self.square_is_attacked_by_opponent(s=s1)
+        return self.move_breaks_absolute_pin(s0=s0, s1=s1)
+
+    def square_is_attacked_by_opponent(self, s: Tuple[int, int]) -> bool:
+        """
+        Whether a given square is being attacked by one of opponent's pieces.
+        """
+        return (
+                self.square_is_attacked_by_knight(s=s) or
+                self.square_is_attacked_orthogonal(s=s) or
+                self.square_is_attacked_diagonal(s=s)
+        )
 
     @staticmethod
     def new_board() -> np.ndarray:
