@@ -268,7 +268,7 @@ class ChessGame:
             self, s: Tuple[int, int], d: Tuple[int, int]
     ) -> Tuple[int, int]:
         """
-        Get the nearest piece to a given square, in a given direction.
+        Position of the nearest piece to a given square, in a given direction.
 
         Parameters
         ----------
@@ -280,9 +280,9 @@ class ChessGame:
 
         Returns
         -------
-        int
-            Piece number of the nearest neighbor in the given direction,
-            or 0 when there is no neighbor in that direction.
+        Tuple[int, int]
+            Position (row and column index) of the nearest neighbor in the given direction,
+            or `s` itself, when there is no neighbor in that direction.
         """
         # Calculate distance to nearest relevant edge
         if 0 in d:  # If direction is orthogonal
@@ -304,10 +304,10 @@ class ChessGame:
         neighbors_idx = np.nonzero(line)[0]
         # If there are now neighbors in that direction, the index array will be empty
         if neighbors_idx.size == 0:
-            return s
+            return s  # Return the position of the square itself
         # Otherwise, first element corresponds to the index of nearest neighbor in that direction
         nearest_dist = neighbors_idx[0] + 1  # Add 1 to get distance of square to the nearest piece
-        # Based on direction and distance, index the board to get the piece number
+        # Based on direction and distance, calculate and return index of the neighbor
         return s[0] + d[0] * nearest_dist, s[1] + d[1] * nearest_dist
 
     @staticmethod
