@@ -6,6 +6,24 @@ class ChessGame:
 
     _COLORS = {-1: "black", 1: "white"}
     _PIECES = {1: "pawn", 2: "knight", 3: "bishop", 4: "rook", 5: "queen", 6: "king"}
+    _DIRECTION_UNIT_VECTORS = np.array(
+        [
+            (1, 0),  # top
+            (-1, 0),  # bottom
+            (0, 1),  # right
+            (0, -1),  # left
+            (1, 1),  # top-right
+            (1, -1),  # top-left
+            (-1, 1),  # bottom-right
+            (-1, -1),  # bottom-left
+        ],
+        dtype=np.int8
+    )
+    # All possible relative moves (i.e. s1 - s0) for a knight
+    _KNIGHT_VECTORS = np.array(
+        [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]],
+        dtype=np.int8
+    )
 
     def __init__(self):
         # Set instance attributes describing the game state to their initial values
@@ -188,78 +206,55 @@ class ChessGame:
         """
         return (
                 self.square_is_attacked_by_knight(s=s) or
-                self.square_is_attacked_orthogonal(s=s) or
-                self.square_is_attacked_diagonal(s=s)
+                self.square_is_attacked_in_straight_line(s=s)
         )
 
-    def square_is_attacked_orthogonal(self, s: Tuple[int, int]) -> bool:
-        # Get the nearest neighboring piece in each orthogonal direction
-        ortho_neighbors = [
-            self.nearest_piece_in_direction(s=s, d=direction)
-            for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        ]
-        # Make an array of opponent's pieces that can attack orthogonal (rook, queen, king)
-        ortho_attacking_pieces = -self._turn * np.array([4, 5, 6])
-        # Rook and queen can attack regardless of distance; return True if they are
-        # in the array of nearest neighbors
-        if np.any(np.isin(ortho_attacking_pieces[:2], ortho_neighbors)):
+    def square_is_attacked_in_straight_line(self, s: Tuple[int, int]) -> bool:
+        """
+        Whether a given square is being attacked by one of opponent's pieces, other than knights.
+        """
+        # Get index of nearest neighbor in each direction
+        idx_neighbors = tuple(
+            [
+                self.position_nearest_piece_in_direction(s=s, d=direction)
+                for direction in self._DIRECTION_UNIT_VECTORS
+            ]
+        )
+        # Get neighbors from their indices
+        neighbors = self._board[idx_neighbors]
+        # Set an array of opponent's pieces
+        opp_pieces = -self._turn * np.arange(7, dtype=np.int8)
+        # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
+        if (
+                opp_pieces[5] in neighbors or  # Queen attacking
+                opp_pieces[4] in neighbors[:4] or  # Rook attacking
+                opp_pieces[3] in neighbors[4:]  # Bishop attacking
+        ):
             return True
-        # King can only attack if it's in an adjacent square; return True only if
-        # it is in an adjacent orthogonal square (i.e. max distance 1).
-        if ortho_attacking_pieces[2] in ortho_neighbors:
-            # Get index of square with opponent's king
-            king_pos = np.argwhere(self._board == ortho_attacking_pieces[2])
-            # Calculate distance vector to the square under consideration
-            dist_vec = king_pos - s
-            # Return True if king is in adjacent square
-            if np.abs(dist_vec).max() == 1:
-                return True
-        # Return False when no queen, rook, or adjacent king are in orthogonal neighbors
-        return False
-
-    def square_is_attacked_diagonal(self, s: Tuple[int, int]) -> bool:
-        diag_neighbors_towards_opponent_side = [
-            self.nearest_piece_in_direction(s=s, d=direction)
-            for direction in [(self._turn, 1), (self._turn, -1)]
-        ]
-        diag_neighbors_towards_self_side = [
-            self.nearest_piece_in_direction(s=s, d=direction)
-            for direction in [(-self._turn, 1), (-self._turn, -1)]
-        ]
-        diag_neighbors = diag_neighbors_towards_self_side + diag_neighbors_towards_opponent_side
-        # Make an array of opponent's pieces that can attack diagonal (bishop, queen, king, pawn)
-        diag_attacking_pieces = -self._turn * np.array([3, 5, 6, 1])
-        # Bishop and queen can attack regardless of distance; return True if they are
-        # in the array of nearest neighbors
-        if np.any(np.isin(diag_attacking_pieces[:2], diag_neighbors)):
-            return True
-        # King can only attack if it's in an adjacent square; return True only if
-        # it is in an adjacent orthogonal square (i.e. max distance 1).
-        if diag_attacking_pieces[2] in diag_neighbors:
-            # Get index of square with opponent's king
-            king_pos = np.argwhere(self._board == diag_attacking_pieces[2])
-            # Calculate distance vector to the square under consideration
-            dist_vec = king_pos - s
-            # Return True if king is in adjacent square
-            if np.abs(dist_vec).max() == 1:
-                return True
-        if diag_attacking_pieces[3] in diag_neighbors_towards_opponent_side:
-
-
-
+        # For king and pawns, we also have to check whether they are in an adjacent square,
+        # and for pawns, we also have to check whether they are in an attacking direction
+        for piece in (opp_pieces[1], opp_pieces[6]):  # iterate over pawn and king
+            # Iterate over indices of the piece, if there are any in neighbors
+            for idx_piece_in_neighbors in np.argwhere(neighbors == piece):
+                # Calculate distance vector from the square to that piece
+                piece_pos_onboard = idx_neighbors[idx_piece_in_neighbors[0]]
+                dist_vec = piece_pos_onboard - s
+                if (
+                        # Piece is pawn, and it's one square away in an attacking direction
+                        (piece == opp_pieces[1] and dist_vec[0] == self._turn) or
+                        # Piece is king, and it's one square away in any direction
+                        (piece == opp_pieces[6] and np.abs(dist_vec).max() == 1)
+                ):
+                    return True
         return False
 
     def square_is_attacked_by_knight(self, s: Tuple[int, int]) -> bool:
         """
         Whether a given square is attacked by one of opponent's knights.
         """
-        # Take all possible relative moves (i.e. s1 - s0) for a knight
-        knight_moves = np.array(
-            [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]],
-            dtype=np.int8
-        )
-        # Add to given start square to get all possible end squares
-        knight_pos = s + knight_moves
+        # Add given start square to all knight vectors
+        # to get all possible knight attacking positions
+        knight_pos = s + self._KNIGHT_VECTORS
         # Take those end squares that are within the board
         inboard_pos_mask = self.squares_are_inside_board(s=knight_pos)
         inboard_knight_pos = knight_pos[inboard_pos_mask]
@@ -269,7 +264,9 @@ class ChessGame:
     def move_breaks_absolute_pin(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
         pass
 
-    def nearest_piece_in_direction(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
+    def position_nearest_piece_in_direction(
+            self, s: Tuple[int, int], d: Tuple[int, int]
+    ) -> Tuple[int, int]:
         """
         Get the nearest piece to a given square, in a given direction.
 
@@ -307,11 +304,11 @@ class ChessGame:
         neighbors_idx = np.nonzero(line)[0]
         # If there are now neighbors in that direction, the index array will be empty
         if neighbors_idx.size == 0:
-            return 0
+            return s
         # Otherwise, first element corresponds to the index of nearest neighbor in that direction
         nearest_dist = neighbors_idx[0] + 1  # Add 1 to get distance of square to the nearest piece
         # Based on direction and distance, index the board to get the piece number
-        return self._board[s[0] + d[0] * nearest_dist, s[1] + d[1] * nearest_dist]
+        return s[0] + d[0] * nearest_dist, s[1] + d[1] * nearest_dist
 
     @staticmethod
     def new_board() -> np.ndarray:
