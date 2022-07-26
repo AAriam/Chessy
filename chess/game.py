@@ -218,51 +218,48 @@ class ChessGame:
     def move_breaks_absolute_pin(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
         pass
 
-    def orthogonal_neighbor(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
+    def nearest_piece_in_direction(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
+        """
+        Get the nearest piece to a given square, in a given direction.
 
-        def right(ind):
-            return s[0], s[1] + ind[0] + 1
+        Parameters
+        ----------
+        s : Tuple[int, int]
+            Row and column index of the square (both from 0 to 7), respectively.
+        d : Tuple[int, int]
+            Direction from white's perspective, as a unit vector.
+            For example, `(1, -1)` means top-left (diagonal), and `(1, 0)` means top.
 
-        def left(ind):
-            return s[0], ind[-1]
-
-        def top(ind):
-            return s[0] + 1 + ind[0], s[1]
-
-        def bottom(ind):
-            return ind[-1], s[1]
-
-        f = {
-            (0, 1): ((s[0], slice(s[1] + 1, None)), right),
-            (0, -1): ((s[0], slice(None, s[1])), left),
-            (1, 0): ((slice(s[0] + 1, None), s[1]), top),
-            (-1, 0): ((slice(None, s[0]), s[1]), bottom)
-        }
-
-        neighbors_idx = np.nonzero(self._board[f[d][0]])[0]
+        Returns
+        -------
+        int
+            Piece number of the nearest neighbor in the given direction,
+            or 0 when there is no neighbor in that direction.
+        """
+        # Calculate distance to nearest relevant edge
+        if 0 in d:  # If direction is orthogonal
+            # Get the index of non-zero element in direction vector
+            i = 1 - d.index(0)
+            # Calculate distance to edge in that direction
+            d_edge = 7 - s[i] if d[i] == 1 else s[i]
+        else:  # If direction is diagonal
+            # Calculate distance to nearest of the two edges in that direction
+            d_edge = min([7 - s[i] if d[i] == 1 else s[i] for i in range(2)])
+        # Slice based on direction and distance to edge, to get the relevant part of the board
+        slicing = tuple([slice(s[i] + d[i], s[i] + d[i] + d[i] * d_edge, d[i]) for i in range(2)])
+        sub_board = self._board[slicing]
+        # For diagonal directions, slices are still 2d-arrays, but the slice was done in such a way
+        # that all squares diagonal to the given square are now on the main diagonal of the new
+        # slice, and can be extracted.
+        line = sub_board if 0 in d else np.diagonal(sub_board)
+        # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
+        neighbors_idx = np.nonzero(line)[0]
+        # If there are now neighbors in that direction, the index array will be empty
         if neighbors_idx.size == 0:
             return 0
-        return self._board[f[d][1](neighbors_idx)]
-
-    def diagonal_neighbor(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
-
-        d_edge = min(
-                7 - s[0] if d[0] == 1 else s[0],
-                7 - s[1] if d[1] == 1 else s[1]
-            )  #  Distance to the nearest edge
-
-        slicing = {
-            (1, 1):   (slice(s[0] + 1, s[0] + 1 + d_edge, +1), slice(s[1] + 1, s[1] + 1 + d_edge, +1)),
-            (1, -1):  (slice(s[0] + 1, s[0] + 1 + d_edge, +1), slice(s[1] - 1, s[1] - 1 - d_edge, -1)),
-            (-1, 1):  (slice(s[0] - 1, s[0] - 1 - d_edge, -1), slice(s[1] + 1, s[1] + 1 + d_edge, +1)),
-            (-1, -1): (slice(s[0] - 1, s[0] - 1 - d_edge, -1), slice(s[1] - 1, s[1] - 1 - d_edge, -1))
-        }
-
-        sub_square = self._board[slicing[d]]
-        neighbors_idx = np.nonzero(np.diagonal(sub_square))[0]
-        if neighbors_idx.size == 0:
-            return 0
-        nearest_dist = neighbors_idx[0] + 1
+        # Otherwise, first element corresponds to the index of nearest neighbor in that direction
+        nearest_dist = neighbors_idx[0] + 1  # Add 1 to get distance of square to the nearest piece
+        # Based on direction and distance, index the board to get the piece number
         return self._board[s[0] + d[0] * nearest_dist, s[1] + d[1] * nearest_dist]
 
     @staticmethod
