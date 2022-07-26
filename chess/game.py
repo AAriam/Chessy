@@ -218,7 +218,36 @@ class ChessGame:
         return False
 
     def square_is_attacked_diagonal(self, s: Tuple[int, int]) -> bool:
-        pass
+        diag_neighbors_towards_opponent_side = [
+            self.nearest_piece_in_direction(s=s, d=direction)
+            for direction in [(self._turn, 1), (self._turn, -1)]
+        ]
+        diag_neighbors_towards_self_side = [
+            self.nearest_piece_in_direction(s=s, d=direction)
+            for direction in [(-self._turn, 1), (-self._turn, -1)]
+        ]
+        diag_neighbors = diag_neighbors_towards_self_side + diag_neighbors_towards_opponent_side
+        # Make an array of opponent's pieces that can attack diagonal (bishop, queen, king, pawn)
+        diag_attacking_pieces = -self._turn * np.array([3, 5, 6, 1])
+        # Bishop and queen can attack regardless of distance; return True if they are
+        # in the array of nearest neighbors
+        if np.any(np.isin(diag_attacking_pieces[:2], diag_neighbors)):
+            return True
+        # King can only attack if it's in an adjacent square; return True only if
+        # it is in an adjacent orthogonal square (i.e. max distance 1).
+        if diag_attacking_pieces[2] in diag_neighbors:
+            # Get index of square with opponent's king
+            king_pos = np.argwhere(self._board == diag_attacking_pieces[2])
+            # Calculate distance vector to the square under consideration
+            dist_vec = king_pos - s
+            # Return True if king is in adjacent square
+            if np.abs(dist_vec).max() == 1:
+                return True
+        if diag_attacking_pieces[3] in diag_neighbors_towards_opponent_side:
+
+
+
+        return False
 
     def square_is_attacked_by_knight(self, s: Tuple[int, int]) -> bool:
         """
