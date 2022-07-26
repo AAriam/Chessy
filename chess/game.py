@@ -247,15 +247,15 @@ class ChessGame:
     def diagonal_neighbor(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
 
         d_edge = min(
-                8 - s[0] if d[0] == 1 else s[0] + 1,
-                8 - s[1] if d[1] == 1 else s[1] + 1
-            )  #  Diagonal distance to the nearest edge
+                7 - s[0] if d[0] == 1 else s[0],
+                7 - s[1] if d[1] == 1 else s[1]
+            )  #  Distance to the nearest edge
 
         slicing = {
-            (1, 1):   (slice(s[0] + 1, s[0] + d_edge), slice(s[1] + 1, s[1] + d_edge)),
-            (1, -1):  (slice(s[0] + 1, s[0] + d_edge), slice(s[1] - 1, s[1] + 2 - d_edge, -1)),
-            (-1, 1):  (slice(s[0] - 1, s[0] - 2 - d_edge, -1), slice(s[1] + 1, s[1] + d_edge)),
-            (-1, -1): (slice(s[0] + 1 - d_edge, s[0]), slice(s[1] + 1 - d_edge, s[1]))
+            (1, 1):   (slice(s[0] + 1, s[0] + 1 + d_edge, +1), slice(s[1] + 1, s[1] + 1 + d_edge, +1)),
+            (1, -1):  (slice(s[0] + 1, s[0] + 1 + d_edge, +1), slice(s[1] - 1, s[1] - 1 - d_edge, -1)),
+            (-1, 1):  (slice(s[0] - 1, s[0] - 1 - d_edge, -1), slice(s[1] + 1, s[1] + 1 + d_edge, +1)),
+            (-1, -1): (slice(s[0] - 1, s[0] - 1 - d_edge, -1), slice(s[1] - 1, s[1] - 1 - d_edge, -1))
         }
 
         sub_square = self._board[slicing[d]]
