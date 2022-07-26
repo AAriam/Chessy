@@ -215,6 +215,56 @@ class ChessGame:
         # Return whether an opponent's knight (knight = 2) is in one of the squares
         return -self._turn * 2 in self._board[inboard_knight_pos[:, 0], inboard_knight_pos[:, 1]]
 
+    def move_breaks_absolute_pin(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
+        pass
+
+    def orthogonal_neighbor(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
+
+        def right(ind):
+            return s[0], s[1] + ind[0] + 1
+
+        def left(ind):
+            return s[0], ind[-1]
+
+        def top(ind):
+            return s[0] + 1 + ind[0], s[1]
+
+        def bottom(ind):
+            return ind[-1], s[1]
+
+        f = {
+            (0, 1): ((s[0], slice(s[1] + 1, None)), right),
+            (0, -1): ((s[0], slice(None, s[1])), left),
+            (1, 0): ((slice(s[0] + 1, None), s[1]), top),
+            (-1, 0): ((slice(None, s[0]), s[1]), bottom)
+        }
+
+        neighbors_idx = np.nonzero(self._board[f[d][0]])[0]
+        if neighbors_idx.size == 0:
+            return 0
+        return self._board[f[d][1](neighbors_idx)]
+
+    def diagonal_neighbor(self, s: Tuple[int, int], d: Tuple[int, int]) -> int:
+
+        d_edge = min(
+                8 - s[0] if d[0] == 1 else s[0] + 1,
+                8 - s[1] if d[1] == 1 else s[1] + 1
+            )  #  Diagonal distance to the nearest edge
+
+        slicing = {
+            (1, 1):   (slice(s[0] + 1, s[0] + d_edge), slice(s[1] + 1, s[1] + d_edge)),
+            (1, -1):  (slice(s[0] + 1, s[0] + d_edge), slice(s[1] - 1, s[1] + 2 - d_edge, -1)),
+            (-1, 1):  (slice(s[0] - 1, s[0] - 2 - d_edge, -1), slice(s[1] + 1, s[1] + d_edge)),
+            (-1, -1): (slice(s[0] + 1 - d_edge, s[0]), slice(s[1] + 1 - d_edge, s[1]))
+        }
+
+        sub_square = self._board[slicing[d]]
+        neighbors_idx = np.nonzero(np.diagonal(sub_square))[0]
+        if neighbors_idx.size == 0:
+            return 0
+        nearest_dist = neighbors_idx[0] + 1
+        return self._board[s[0] + d[0] * nearest_dist, s[1] + d[1] * nearest_dist]
+
     @staticmethod
     def new_board() -> np.ndarray:
         """
