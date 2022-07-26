@@ -193,7 +193,29 @@ class ChessGame:
         )
 
     def square_is_attacked_orthogonal(self, s: Tuple[int, int]) -> bool:
-        pass
+        # Get the nearest neighboring piece in each orthogonal direction
+        ortho_neighbors = [
+            self.nearest_piece_in_direction(s=s, d=direction)
+            for direction in [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        ]
+        # Make an array of opponent's pieces that can attack orthogonal (rook, queen, king)
+        ortho_attacking_pieces = -self._turn * np.array([4, 5, 6])
+        # Rook and queen can attack regardless of distance; return True if they are
+        # in the array of nearest neighbors
+        if np.any(np.isin(ortho_attacking_pieces[:2], ortho_neighbors)):
+            return True
+        # King can only attack if it's in an adjacent square; return True only if
+        # it is in an adjacent orthogonal square (i.e. max distance 1).
+        if ortho_attacking_pieces[2] in ortho_neighbors:
+            # Get index of square with opponent's king
+            king_pos = np.argwhere(self._board == ortho_attacking_pieces[2])
+            # Calculate distance vector to the square under consideration
+            dist_vec = king_pos - s
+            # Return True if king is in adjacent square
+            if np.abs(dist_vec).max() == 1:
+                return True
+        # Return False when no queen, rook, or adjacent king are in orthogonal neighbors
+        return False
 
     def square_is_attacked_diagonal(self, s: Tuple[int, int]) -> bool:
         pass
