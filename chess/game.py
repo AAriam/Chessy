@@ -312,15 +312,10 @@ class ChessGame:
             Position (row and column index) of the nearest neighbor in the given direction,
             or `s` itself, when there is no neighbor in that direction.
         """
-        # Calculate distance to nearest relevant edge
-        if 0 in d:  # If direction is orthogonal
-            # Get the index of non-zero element in direction vector
-            i = 1 - d.index(0)
-            # Calculate distance to edge in that direction
-            d_edge = 7 - s[i] if d[i] == 1 else s[i]
-        else:  # If direction is diagonal
-            # Calculate distance to nearest of the two edges in that direction
-            d_edge = min([7 - s[i] if d[i] == 1 else s[i] for i in range(2)])
+        # Calculate distance to nearest relevant edge. For orthogonal directions, this is the
+        # distance to the edge along that direction. For diagonal directions, this is the
+        # minimum of the distance to each of the two edges along that direction.
+        d_edge = np.where(d==1, 7-s, s)[d!=0].min()
         # Slice based on direction and distance to edge, to get the relevant part of the board
         slicing = tuple([slice(s[i] + d[i], s[i] + d[i] * (d_edge + 1), d[i]) for i in range(2)])
         sub_board = self._board[slicing]
