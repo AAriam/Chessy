@@ -267,20 +267,21 @@ class ChessGame:
         # 1. If the piece and king are not on the same row, same column, or same diagonal.
         king_pos = np.argwhere(self._board == 6 * self._turn)  # Find position of player's king
         s0_king_vec = king_pos - s0  # Distance vector from start square to king square
-        if 0 not in s0_king_vec and abs(s0_king_vec[0]) != abs(s0_king_vec[1]):
+        s0_king_vec_abs = np.abs(s0_king_vec)
+        if not np.isin(0, s0_king_vec) and s0_king_vec_abs[0] != s0_king_vec_abs[1]:
             return False
         # 2. If the move is along the king direction (towards or away from).
-        dir_king = s0_king_vec / np.abs(s0_king_vec).max()  # King's direction vector
-        s0_s1_vec = np.subtract(s1, s0)  # Distance vector from start to end square
+        dir_king = s0_king_vec / s0_king_vec_abs.max()  # King's direction vector
+        s0_s1_vec = s1 - s0  # Distance vector from start to end square
         dir_move = s0_s1_vec / np.abs(s0_s1_vec).max()  # Move's direction vector
         if np.all(dir_move == dir_king) or np.all(dir_move == -dir_king):
             return False
         # 3. If there is another piece between king and the square.
-        kingside_neighbor = self.neighbor_in_direction(s=s0, d=tuple(dir_king))[0]
+        kingside_neighbor = self.neighbor_in_direction(s=s0, d=dir_king)[0]
         if kingside_neighbor != 6 * self._turn:
             return False
         # 4. If the immediate neighbor on the other side is not an opponent's piece.
-        otherside_neighbor = self.neighbor_in_direction(s=s0, d=tuple(-dir_king))[0]
+        otherside_neighbor = self.neighbor_in_direction(s=s0, d=-dir_king)[0]
         if otherside_neighbor == 0 or np.sign(otherside_neighbor) == self._turn:
             return False
         # 5. If the opponent's piece cannot attack the king from that direction.
