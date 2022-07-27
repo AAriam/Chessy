@@ -293,29 +293,33 @@ class ChessGame:
         return True
 
     def neighbor_in_direction(
-            self, s: Tuple[int, int], d: Tuple[int, int]
+            self, s: np.ndarray, d: np.ndarray
     ) -> np.ndarray:
         """
-        Position of the nearest piece to a given square, in a given direction.
+        Get type and coordinates of the nearest neighbor to a given square, in a given direction.
 
         Parameters
         ----------
-        s : Tuple[int, int]
-            Row and column index of the square (both from 0 to 7), respectively.
-        d : Tuple[int, int]
+        s : numpy.ndarray
+            Coordinates of the square.
+        d : numpy.ndarray
             Direction from white's perspective, as a unit vector.
-            For example, `(1, -1)` means top-left (diagonal), and `(1, 0)` means top.
+            For example, `[1, -1]` means top-left (diagonal), and `[1, 0]` means top.
 
         Returns
         -------
-        Tuple[int, int]
-            Position (row and column index) of the nearest neighbor in the given direction,
-            or `s` itself, when there is no neighbor in that direction.
+        numpy.ndarray
+            Type and coordinates of the nearest neighbor in the given direction, as one array of
+            shape (3,), i.e. [type, pos_x, pos_y].
+            If the given square is the last square on the board in the given direction, then
+            the type and position of the square itself is returned. On the other hand, if there is
+            no piece in the given direction (but the square is not the last),
+            then type will be 0 (empty) and position will be the last square in that direction.
         """
-        # Calculate distance to nearest relevant edge. For orthogonal directions, this is the
+        # Calculate distance to the nearest relevant edge. For orthogonal directions, this is the
         # distance to the edge along that direction. For diagonal directions, this is the
         # minimum of the distance to each of the two edges along that direction.
-        d_edge = np.where(d==1, 7-s, s)[d!=0].min()
+        d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
         # Slice based on direction and distance to edge, to get the relevant part of the board
         slicing = tuple([slice(s[i] + d[i], s[i] + d[i] * (d_edge + 1), d[i]) for i in range(2)])
         sub_board = self._board[slicing]
