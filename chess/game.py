@@ -325,17 +325,14 @@ class ChessGame:
         line = sub_board if 0 in d else np.diagonal(sub_board)
         # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
         neighbors_idx = np.nonzero(line)[0]
-        # If there are now neighbors in that direction, the index array will be empty
-        if neighbors_idx.size == 0:
-            position = [s[i] + d[i] * d_edge for i in range(2)]
-            piece = self._board[tuple(position)]
-            return np.array([piece, *position])   # Return the position of the square itself
-        # Otherwise, first element corresponds to the index of nearest neighbor in that direction
-        nearest_dist = neighbors_idx[0] + 1  # Add 1 to get distance of square to the nearest piece
+        # If there are now neighbors in that direction, the index array will be empty. In this case
+        # we return the type and position of the last empty square in that direction. Otherwise,
+        # the first element corresponds to the index of nearest neighbor in that direction. To that,
+        # add 1 to get distance of square to the nearest piece
         # Based on direction and distance, calculate and return index of the neighbor
-        position = [s[i] + d[i] * nearest_dist for i in range(2)]
-        piece = self._board[tuple(position)]
-        return np.array([piece, *position])
+        pos_x, pos_y = s + d * (d_edge if neighbors_idx.size == 0 else neighbors_idx[0] + 1)
+        piece = self._board[pos_x, pos_y]
+        return np.array([piece, pos_x, pos_y], dtype=np.int8)
 
     @staticmethod
     def new_board() -> np.ndarray:
