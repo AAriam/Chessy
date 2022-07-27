@@ -20,6 +20,8 @@ class ChessGame:
         dtype=np.int8
     )
     # All possible relative moves (i.e. s1 - s0) for a knight
+    # Equal to:
+    # [vec for vec in itertools.permutations([-2, -1, 1, 2], 2) if abs(vec[0]) + abs(vec[1]) == 3]
     _KNIGHT_VECTORS = np.array(
         [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]],
         dtype=np.int8
@@ -156,6 +158,7 @@ class ChessGame:
             raise IllegalMoveError("Start-square is out of board.")
         if not self.squares_are_inside_board(s=s1):
             raise IllegalMoveError("End-square is out of board.")
+        # For move resulting in a self-check
         if self.move_results_in_own_check(s0=s0, s1=s1):
             raise IllegalMoveError("Move results in current player being checked.")
         return
@@ -262,7 +265,40 @@ class ChessGame:
         return -self._turn * 2 in self._board[inboard_knight_pos[:, 0], inboard_knight_pos[:, 1]]
 
     def move_breaks_absolute_pin(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
-        pass
+        """
+        Whether a given move (start-square s0, end-square s1) breaks an absolute pin
+        for the current player.
+        """
+        # A move from a given square cannot break a pin, if:
+        # (notice that the order matters, i.e. checking later criteria without first having checked
+        # all the earlier ones may result in a wrong conclusion)
+        # 1. If the piece and king are not on the same row, same column, or same diagonal.
+        king_pos = np.argwhere(self._board == 6 * self._turn)  # Find position of player's king
+        s0_king_vec = king_pos - s0  # Distance vector from start square to king square
+        if 0 not in s0_king_vec and abs(s0_king_vec[0]) != abs(s0_king_vec[1]):
+            return False
+        # 2. If the move is along the king direction (towards or away from).
+        dir_king = s0_king_vec / np.abs(s0_king_vec).max()  # King's direction vector
+        s0_s1_vec = np.subtract(s1, s0)  # Distance vector from start to end square
+        dir_move = s0_s1_vec / np.abs(s0_s1_vec).max()  # Move's direction vector
+        if np.all(dir_move == dir_king) or np.all(dir_move == -dir_king):
+            return False
+        # 3. If there is another piece between king and the square.
+        kingside_neighbor_idx = self.position_nearest_piece_in_direction(s=s0, d=tuple(dir_king))
+        kingside_neighbor = self._board[kingside_neighbor_idx]
+        if kingside_neighbor != 6 * self._turn:
+            return False
+        # 4. If the immediate neighbor on the other side is not an opponent's piece.
+        otherside_neighbor_idx = self.position_nearest_piece_in_direction(s=s0, d=tuple(-dir_king))
+        otherside_neighbor = self._board[otherside_neighbor_idx]
+        if np.sign(otherside_neighbor) == self._turn:
+            return False
+        # 5. If the opponent's piece cannot attack the king from that direction.
+        attacking_pieces = np.array([5, 4 if 0 in dir_king else 3]) * -self._turn
+        if otherside_neighbor not in attacking_pieces:
+            return False
+        # If none of the above criteria is met, then the move does break an absolute pin.
+        return True
 
     def position_nearest_piece_in_direction(
             self, s: Tuple[int, int], d: Tuple[int, int]
