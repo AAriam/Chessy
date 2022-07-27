@@ -144,20 +144,22 @@ class ChessGame:
         IllegalMoveError
             When the move is not legal.
         """
+        # For move beginning outside the board
+        if not self.squares_are_inside_board(s=s0):
+            raise IllegalMoveError("Start-square is out of board.")
         # For moves starting from an empty square
         if self.square_is_empty(s=s0):
             raise IllegalMoveError("Start-square is empty.")
         # For wrong turn (i.e. it is one player's turn, but other player's piece is being moved)
         if not self.square_belongs_to_current_player(s=s0):
             raise IllegalMoveError(f"It is {self._COLORS[self._turn]}'s turn.")
+        # For move ending outside the board
+        if not self.squares_are_inside_board(s=s1):
+            raise IllegalMoveError("End-square is out of board.")
         # For move ending in a square occupied by current player's own pieces
         if self.square_belongs_to_current_player(s=s1):
             raise IllegalMoveError("End-square occupied by current player's piece.")
-        # For move beginning or leading outside the board
-        if not self.squares_are_inside_board(s=s0):
-            raise IllegalMoveError("Start-square is out of board.")
-        if not self.squares_are_inside_board(s=s1):
-            raise IllegalMoveError("End-square is out of board.")
+
         # For move resulting in a self-check
         if self.move_results_in_own_check(s0=s0, s1=s1):
             raise IllegalMoveError("Move results in current player being checked.")
