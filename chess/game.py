@@ -276,14 +276,12 @@ class ChessGame:
         if np.all(dir_move == dir_king) or np.all(dir_move == -dir_king):
             return False
         # 3. If there is another piece between king and the square.
-        kingside_neighbor_idx = self.position_nearest_piece_in_direction(s=s0, d=tuple(dir_king))
-        kingside_neighbor = self._board[kingside_neighbor_idx]
+        kingside_neighbor = self.neighbor_in_direction(s=s0, d=tuple(dir_king))[0]
         if kingside_neighbor != 6 * self._turn:
             return False
         # 4. If the immediate neighbor on the other side is not an opponent's piece.
-        otherside_neighbor_idx = self.position_nearest_piece_in_direction(s=s0, d=tuple(-dir_king))
-        otherside_neighbor = self._board[otherside_neighbor_idx]
-        if np.sign(otherside_neighbor) == self._turn:
+        otherside_neighbor = self.neighbor_in_direction(s=s0, d=tuple(-dir_king))[0]
+        if otherside_neighbor == 0 or np.sign(otherside_neighbor) == self._turn:
             return False
         # 5. If the opponent's piece cannot attack the king from that direction.
         attacking_pieces = np.array([5, 4 if 0 in dir_king else 3]) * -self._turn
