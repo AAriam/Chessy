@@ -207,15 +207,17 @@ class ChessGame:
         """
         Whether a given square is being attacked by one of opponent's pieces.
         """
-        return (
-                self.square_is_attacked_by_knight(s=s) or
-                self.square_is_attacked_in_straight_line(s=s)
-        )
-
-    def square_is_attacked_in_straight_line(self, s: Tuple[int, int]) -> bool:
-        """
-        Whether a given square is being attacked by one of opponent's pieces, other than knights.
-        """
+        # 1. CHECK FOR KNIGHT ATTACKS
+        # Add given start square to all knight vectors
+        # to get all possible knight attacking positions
+        knight_pos = s + self._KNIGHT_VECTORS
+        # Take those end squares that are within the board
+        inboard_pos_mask = self.squares_are_inside_board(s=knight_pos)
+        inboard_knight_pos = knight_pos[inboard_pos_mask]
+        # Return True if an opponent's knight (knight = 2) is in one of the squares
+        if -self._turn * 2 in self._board[inboard_knight_pos[:, 0], inboard_knight_pos[:, 1]]:
+            return True
+        # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get index of nearest neighbor in each direction
         idx_neighbors = tuple(
             [
@@ -225,7 +227,7 @@ class ChessGame:
         )
         # Get neighbors from their indices
         neighbors = self._board[idx_neighbors]
-        # Set an array of opponent's pieces
+        # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
         opp_pieces = -self._turn * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
         if (
@@ -249,20 +251,8 @@ class ChessGame:
                         (piece == opp_pieces[6] and np.abs(dist_vec).max() == 1)
                 ):
                     return True
+        # All criteria are checked, return False
         return False
-
-    def square_is_attacked_by_knight(self, s: Tuple[int, int]) -> bool:
-        """
-        Whether a given square is attacked by one of opponent's knights.
-        """
-        # Add given start square to all knight vectors
-        # to get all possible knight attacking positions
-        knight_pos = s + self._KNIGHT_VECTORS
-        # Take those end squares that are within the board
-        inboard_pos_mask = self.squares_are_inside_board(s=knight_pos)
-        inboard_knight_pos = knight_pos[inboard_pos_mask]
-        # Return whether an opponent's knight (knight = 2) is in one of the squares
-        return -self._turn * 2 in self._board[inboard_knight_pos[:, 0], inboard_knight_pos[:, 1]]
 
     def move_breaks_absolute_pin(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
         """
