@@ -148,7 +148,7 @@ class ChessGame:
         if not self.squares_are_inside_board(s=s0):
             raise IllegalMoveError("Start-square is out of board.")
         # For moves starting from an empty square
-        if self.square_is_empty(s=s0):
+        if not self.piece_in_square(s=s0):
             raise IllegalMoveError("Start-square is empty.")
         # For wrong turn (i.e. it is one player's turn, but other player's piece is being moved)
         if not self.square_belongs_to_current_player(s=s0):
@@ -165,17 +165,17 @@ class ChessGame:
             raise IllegalMoveError("Move results in current player being checked.")
         return
 
-    def square_is_empty(self, s: Tuple[int, int]) -> bool:
-        """
-        Whether a given square is empty.
-        """
-        return self._board[s] == 0
 
     def square_belongs_to_current_player(self, s: Tuple[int, int]) -> bool:
+    def piece_in_square(self, s: np.ndarray) -> int:
+        """
+        Type of piece on a given square (or 0 if empty).
+        """
+        return self._board[tuple(s)]
         """
         Whether a given square has a piece on it belonging to the player in turn.
         """
-        return self._turn == np.sign(self._board[s])
+        return self._turn == np.sign(self.piece_in_square(s))
 
     @staticmethod
     def squares_are_inside_board(s: Union[Tuple[int, int], np.ndarray]) -> np.ndarray:
@@ -201,7 +201,7 @@ class ChessGame:
         """
         Whether a given move results in the player making the move to be checked.
         """
-        if abs(self._board[s0]) == 6:  # If the piece being moved is a king
+        if abs(self.piece_in_square(s0)) == 6:  # If the piece being moved is a king
             return self.square_is_attacked_by_opponent(s=s1)
         return self.move_breaks_absolute_pin(s0=s0, s1=s1)
 
