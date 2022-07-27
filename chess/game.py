@@ -8,14 +8,14 @@ class ChessGame:
     _PIECES = {1: "pawn", 2: "knight", 3: "bishop", 4: "rook", 5: "queen", 6: "king"}
     _DIRECTION_UNIT_VECTORS = np.array(
         [
-            (1, 0),  # top
-            (-1, 0),  # bottom
-            (0, 1),  # right
-            (0, -1),  # left
-            (1, 1),  # top-right
-            (1, -1),  # top-left
-            (-1, 1),  # bottom-right
-            (-1, -1),  # bottom-left
+            [1, 0],  # top
+            [-1, 0],  # bottom
+            [0, 1],  # right
+            [0, -1],  # left
+            [1, 1],  # top-right
+            [1, -1],  # top-left
+            [-1, 1],  # bottom-right
+            [-1, -1],  # bottom-left
         ],
         dtype=np.int8
     )
@@ -104,7 +104,7 @@ class ChessGame:
         """
         return self._score
 
-    def move(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> Optional[int]:
+    def move(self, s0: Tuple[int, int], s1: Tuple[int, int], promote_to: int = 0) -> Optional[int]:
         """
         Make a move for the current player.
 
@@ -120,6 +120,8 @@ class ChessGame:
         Optional[int]
             The score of white player if the game is over, `None` otherwise.
         """
+        s0 = np.array(s0, dtype=np.int8)
+        s1 = np.array(s1, dtype=np.int8)
         if self._game_over:  # Return white's score if the game is over
             return self._score
         self.raise_for_illegal_move(s0=s0, s1=s1)  # Otherwise, raise an error if move is illegal
@@ -128,7 +130,7 @@ class ChessGame:
             return self._score
         return
 
-    def raise_for_illegal_move(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> None:
+    def raise_for_illegal_move(self, s0: np.ndarray, s1: np.ndarray) -> None:
         """
         Raise an IllegalMoveError if the given move is illegal.
 
@@ -145,7 +147,7 @@ class ChessGame:
             When the move is not legal.
         """
         # For move beginning outside the board
-        if not self.squares_are_inside_board(s=s0):
+        if not self.squares_are_inside_board(ss=s0):
             raise IllegalMoveError("Start-square is out of board.")
         # For moves starting from an empty square
         if not self.piece_in_square(s=s0):
@@ -154,7 +156,7 @@ class ChessGame:
         if not self.square_belongs_to_current_player(s=s0):
             raise IllegalMoveError(f"It is {self._COLORS[self._turn]}'s turn.")
         # For move ending outside the board
-        if not self.squares_are_inside_board(s=s1):
+        if not self.squares_are_inside_board(ss=s1):
             raise IllegalMoveError("End-square is out of board.")
         # For move ending in a square occupied by current player's own pieces
         if self.square_belongs_to_current_player(s=s1):
@@ -166,38 +168,39 @@ class ChessGame:
         return
 
 
-    def square_belongs_to_current_player(self, s: Tuple[int, int]) -> bool:
     def piece_in_square(self, s: np.ndarray) -> int:
         """
         Type of piece on a given square (or 0 if empty).
         """
         return self._board[tuple(s)]
+
+    def square_belongs_to_current_player(self, s: np.ndarray) -> bool:
         """
         Whether a given square has a piece on it belonging to the player in turn.
         """
         return self._turn == np.sign(self.piece_in_square(s))
 
     @staticmethod
-    def squares_are_inside_board(s: Union[Tuple[int, int], np.ndarray]) -> np.ndarray:
+    def squares_are_inside_board(ss: np.ndarray) -> np.ndarray:
         """
         Whether a number of given squares lie outside the chessboard.
 
         Parameters
         ----------
-        s : Union[Tuple[int, int], numpy.ndarray]
-          Either the indices of a single square (as a 2-tuple),
-          or multiple squares (as a 2d numpy array).
+        ss : numpy.ndarray
+          Either the coordinates of a single square (shape (2,)),
+          or n squares (shape(n, 2)).
 
         Returns
         -------
         numpy.ndarray
           A 1d boolean array with same size as number of input squares.
         """
-        if not isinstance(s, np.ndarray):
-            s = np.ndarray([s])
-        return np.all(np.all([s < 8, s > -1], axis=0), axis=1)
+        if ss.ndim == 1:
+            ss = np.expand_dims(ss, axis=0)
+        return np.all(np.all([ss < 8, ss > -1], axis=0), axis=1)
 
-    def move_results_in_own_check(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
+    def move_results_in_own_check(self, s0: np.ndarray, s1: np.ndarray) -> bool:
         """
         Whether a given move results in the player making the move to be checked.
         """
@@ -213,7 +216,7 @@ class ChessGame:
         # Add given start-square to all knight vectors to get all possible attacking positions
         knight_pos = s + self._KNIGHT_VECTORS
         # Take those end squares that are within the board
-        inboards = knight_pos[self.squares_are_inside_board(s=knight_pos)]
+        inboards = knight_pos[self.squares_are_inside_board(ss=knight_pos)]
         # Return True if an opponent's knight (knight = 2) is in one of the squares
         if np.isin(-self._turn * 2, self._board[inboards[:, 0], inboards[:, 1]]):
             return True
