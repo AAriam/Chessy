@@ -256,7 +256,7 @@ class ChessGame:
         # All criteria are checked, return False
         return False
 
-    def move_breaks_absolute_pin(self, s0: Tuple[int, int], s1: Tuple[int, int]) -> bool:
+    def move_breaks_absolute_pin(self, s0: np.ndarray, s1: np.ndarray) -> bool:
         """
         Whether a given move (start-square s0, end-square s1) breaks an absolute pin
         for the current player.
