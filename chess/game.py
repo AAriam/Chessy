@@ -290,6 +290,13 @@ class ChessGame:
         # If none of the above criteria is met, then the move does break an absolute pin.
         return True
 
+    def all_neighbors(self, s: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        neighbor_pieces = np.empty(shape=8, dtype=np.int8)
+        neighbor_coordinates = np.empty(shape=(8, 2), dtype=np.int8)
+        for idx, direction in self._DIRECTION_UNIT_VECTORS:
+            neighbor_pieces[idx], neighbor_coordinates[idx] = self.neighbor_in_direction(s, direction)
+        return neighbor_pieces, neighbor_coordinates
+
     def neighbor_in_direction(
             self, s: np.ndarray, d: np.ndarray
     ) -> Tuple[int, np.ndarray]:
