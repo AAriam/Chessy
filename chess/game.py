@@ -292,7 +292,7 @@ class ChessGame:
 
     def neighbor_in_direction(
             self, s: np.ndarray, d: np.ndarray
-    ) -> np.ndarray:
+    ) -> Tuple[int, np.ndarray]:
         """
         Get type and coordinates of the nearest neighbor to a given square, in a given direction.
 
@@ -306,9 +306,8 @@ class ChessGame:
 
         Returns
         -------
-        numpy.ndarray
-            Type and coordinates of the nearest neighbor in the given direction, as one array of
-            shape (3,), i.e. [type, pos_x, pos_y].
+        Tuple[int, numpy.ndarray]
+            Type and coordinates of the nearest neighbor in the given direction.
             If the given square is the last square on the board in the given direction, then
             the type and position of the square itself is returned. On the other hand, if there is
             no piece in the given direction (but the square is not the last),
@@ -332,9 +331,8 @@ class ChessGame:
         # the first element corresponds to the index of nearest neighbor in that direction. To that,
         # add 1 to get distance of square to the nearest piece
         # Based on direction and distance, calculate and return index of the neighbor
-        pos_x, pos_y = s + d * (d_edge if neighbors_idx.size == 0 else neighbors_idx[0] + 1)
-        piece = self._board[pos_x, pos_y]
-        return np.array([piece, pos_x, pos_y], dtype=np.int8)
+        pos = s + d * (d_edge if neighbors_idx.size == 0 else neighbors_idx[0] + 1)
+        return self._board[pos[0], pos[1]], pos
 
     @staticmethod
     def new_board() -> np.ndarray:
