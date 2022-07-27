@@ -292,9 +292,9 @@ class ChessGame:
         # If none of the above criteria is met, then the move does break an absolute pin.
         return True
 
-    def position_nearest_piece_in_direction(
+    def neighbor_in_direction(
             self, s: Tuple[int, int], d: Tuple[int, int]
-    ) -> Tuple[int, int]:
+    ) -> np.ndarray:
         """
         Position of the nearest piece to a given square, in a given direction.
 
@@ -332,11 +332,15 @@ class ChessGame:
         neighbors_idx = np.nonzero(line)[0]
         # If there are now neighbors in that direction, the index array will be empty
         if neighbors_idx.size == 0:
-            return s  # Return the position of the square itself
+            position = [s[i] + d[i] * d_edge for i in range(2)]
+            piece = self._board[tuple(position)]
+            return np.array([piece, *position])   # Return the position of the square itself
         # Otherwise, first element corresponds to the index of nearest neighbor in that direction
         nearest_dist = neighbors_idx[0] + 1  # Add 1 to get distance of square to the nearest piece
         # Based on direction and distance, calculate and return index of the neighbor
-        return s[0] + d[0] * nearest_dist, s[1] + d[1] * nearest_dist
+        position = [s[i] + d[i] * nearest_dist for i in range(2)]
+        piece = self._board[tuple(position)]
+        return np.array([piece, *position])
 
     @staticmethod
     def new_board() -> np.ndarray:
