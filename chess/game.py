@@ -158,10 +158,15 @@ class ChessGame:
         # For move ending outside the board
         if not self.squares_are_inside_board(ss=s1):
             raise IllegalMoveError("End-square is out of board.")
+        # For move starting and ending in the same square
+        if s0 == s1:
+            raise IllegalMoveError("Start and end-square are the same.")
         # For move ending in a square occupied by current player's own pieces
         if self.square_belongs_to_current_player(s=s1):
             raise IllegalMoveError("End-square occupied by current player's piece.")
-
+        is_illegal, msg = self.move_illegal_for_piece(s0=s0, s1=s1)
+        if is_illegal:
+            raise IllegalMoveError(msg)
         # For move resulting in a self-check
         if self.move_results_in_own_check(s0=s0, s1=s1):
             raise IllegalMoveError("Move results in current player being checked.")
