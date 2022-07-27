@@ -205,30 +205,21 @@ class ChessGame:
             return self.square_is_attacked_by_opponent(s=s1)
         return self.move_breaks_absolute_pin(s0=s0, s1=s1)
 
-    def square_is_attacked_by_opponent(self, s: Tuple[int, int]) -> bool:
+    def square_is_attacked_by_opponent(self, s: np.ndarray) -> bool:
         """
         Whether a given square is being attacked by one of opponent's pieces.
         """
         # 1. CHECK FOR KNIGHT ATTACKS
-        # Add given start square to all knight vectors
-        # to get all possible knight attacking positions
+        # Add given start-square to all knight vectors to get all possible attacking positions
         knight_pos = s + self._KNIGHT_VECTORS
         # Take those end squares that are within the board
-        inboard_pos_mask = self.squares_are_inside_board(s=knight_pos)
-        inboard_knight_pos = knight_pos[inboard_pos_mask]
+        inboards = knight_pos[self.squares_are_inside_board(s=knight_pos)]
         # Return True if an opponent's knight (knight = 2) is in one of the squares
-        if -self._turn * 2 in self._board[inboard_knight_pos[:, 0], inboard_knight_pos[:, 1]]:
+        if np.isin(-self._turn * 2, self._board[inboards[:, 0], inboards[:, 1]]):
             return True
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
-        # Get index of nearest neighbor in each direction
-        idx_neighbors = tuple(
-            [
-                self.position_nearest_piece_in_direction(s=s, d=direction)
-                for direction in self._DIRECTION_UNIT_VECTORS
-            ]
-        )
-        # Get neighbors from their indices
-        neighbors = self._board[idx_neighbors]
+        # Get nearest neighbor in each direction
+        neighbors, idx_neighbors = self.all_neighbors(s=s)
         # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
         opp_pieces = -self._turn * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
@@ -242,10 +233,9 @@ class ChessGame:
         # and for pawns, we also have to check whether they are in an attacking direction
         for piece in (opp_pieces[1], opp_pieces[6]):  # iterate over pawn and king
             # Iterate over indices of the piece, if there are any in neighbors
-            for idx_piece_in_neighbors in np.argwhere(neighbors == piece):
+            for piece_coordinates in idx_neighbors[neighbors == piece]:
                 # Calculate distance vector from the square to that piece
-                piece_pos_onboard = idx_neighbors[idx_piece_in_neighbors[0]]
-                dist_vec = piece_pos_onboard - s
+                dist_vec = piece_coordinates - s
                 if (
                         # Piece is pawn, and it's one square away in an attacking direction
                         (piece == opp_pieces[1] and dist_vec[0] == self._turn) or
