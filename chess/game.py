@@ -180,7 +180,7 @@ class ChessGame:
         piece = abs(self.piece_in_square(s0))
         match piece:
             case 1:
-                cond = (move[0] == 1 and move_abs[1] < 2) or np.all(move == [2, 0])
+                cond = (move[0] == self._turn and move_abs[1] < 2) or np.all(move == [2*self._turn, 0])
             case 2:
                 cond = not(np.isin(3, move_abs) or move_manhattan_dist != 3)
             case 3:
