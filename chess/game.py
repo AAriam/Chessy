@@ -322,11 +322,11 @@ class ChessGame:
         return True
 
     def all_neighbors(self, s: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        neighbor_pieces = np.empty(shape=8, dtype=np.int8)
-        neighbor_coordinates = np.empty(shape=(8, 2), dtype=np.int8)
-        for idx, direction in self._DIRECTION_UNIT_VECTORS:
-            neighbor_pieces[idx], neighbor_coordinates[idx] = self.neighbor_in_direction(s, direction)
-        return neighbor_pieces, neighbor_coordinates
+        pieces = np.empty(shape=8, dtype=np.int8)
+        coords = np.empty(shape=(8, 2), dtype=np.int8)
+        for idx, direction in enumerate(self._DIRECTION_UNIT_VECTORS):
+            pieces[idx], coords[idx] = self.neighbor_in_direction(s, direction)
+        return pieces, coords
 
     def neighbor_in_direction(
             self, s: np.ndarray, d: np.ndarray
