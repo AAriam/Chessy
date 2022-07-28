@@ -1,4 +1,4 @@
-from typing import Sequence, Tuple, Optional, Union
+from typing import Sequence, Tuple, Optional
 import numpy as np
 
 
