@@ -301,9 +301,9 @@ class ChessGame:
         if not np.isin(0, s0_king_vec) and s0_king_vec_abs[0] != s0_king_vec_abs[1]:
             return False
         # 2. If the move is along the king direction (towards or away from).
-        dir_king = s0_king_vec / s0_king_vec_abs.max()  # King's direction vector
+        dir_king = s0_king_vec // s0_king_vec_abs.max()  # King's direction vector
         s0_s1_vec = s1 - s0  # Distance vector from start to end square
-        dir_move = s0_s1_vec / np.abs(s0_s1_vec).max()  # Move's direction vector
+        dir_move = s0_s1_vec // np.abs(s0_s1_vec).max()  # Move's direction vector
         if np.all(dir_move == dir_king) or np.all(dir_move == -dir_king):
             return False
         # 3. If there is another piece between king and the square.
