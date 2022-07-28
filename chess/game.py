@@ -295,7 +295,7 @@ class ChessGame:
         # (notice that the order matters, i.e. checking later criteria without first having checked
         # all the earlier ones may result in a wrong conclusion)
         # 1. If the piece and king are not on the same row, same column, or same diagonal.
-        king_pos = np.argwhere(self._board == 6 * self._turn)  # Find position of player's king
+        king_pos = np.argwhere(self._board == 6 * self._turn)[0]  # Find position of player's king
         s0_king_vec = king_pos - s0  # Distance vector from start square to king square
         s0_king_vec_abs = np.abs(s0_king_vec)
         if not np.isin(0, s0_king_vec) and s0_king_vec_abs[0] != s0_king_vec_abs[1]:
