@@ -174,8 +174,8 @@ class ChessGame:
 
     def move_illegal_for_piece(self, s0: np.ndarray, s1: np.ndarray) -> Tuple[bool, str]:
         move = s1 - s0
-        move_abs = move.abs()
-        move_dir = move / move_abs.max()
+        move_abs = np.abs(move)
+        move_dir = move // move_abs.max()
         move_manhattan_dist = move_abs.sum()
         piece = abs(self.piece_in_square(s0))
         match piece:
