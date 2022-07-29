@@ -6,18 +6,9 @@ class ChessGame:
 
     _COLORS = {-1: "black", 1: "white"}
     _PIECES = {1: "pawn", 2: "knight", 3: "bishop", 4: "rook", 5: "queen", 6: "king"}
+    # Directions: top, bottom, right, left, top-right, top-left, bottom-right, bottom-left
     _DIRECTION_UNIT_VECTORS = np.array(
-        [
-            [1, 0],  # top
-            [-1, 0],  # bottom
-            [0, 1],  # right
-            [0, -1],  # left
-            [1, 1],  # top-right
-            [1, -1],  # top-left
-            [-1, 1],  # bottom-right
-            [-1, -1],  # bottom-left
-        ],
-        dtype=np.int8
+        [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]], dtype=np.int8
     )
     # All possible relative moves (i.e. s1 - s0) for a knight
     # Equal to:
