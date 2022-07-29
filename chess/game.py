@@ -176,8 +176,8 @@ class ChessGame:
                 if s0[0] == 7:
                     self._can_castle[self._turn, 1] = 0
 
-        if np.sign(self.piece_in_square(s1)) == -self._turn:
-            self._fifty_move_draw_count = 0
+        if np.sign(self.piece_in_square(s1)) == -self._turn:  # If capture has been made
+            self._fifty_move_draw_count = 0  # reset fifty move count
         self._board[tuple(s1)] = self._board[tuple(s0)]
         self._board[tuple(s0)] = 0
         self._turn *= -1
@@ -222,12 +222,21 @@ class ChessGame:
                 f"{self._PIECES[abs(self.piece_in_square(s0))].capitalize()}s "
                 f"cannot move in direction {s1- s0}."
             )
+        if self.move_doesnt_resolve_check(s0=s0, s1=s1):
+            raise IllegalMoveError("Move doesn't resolve check.")
         if self.move_is_blocked(s0=s0, s1=s1):
             raise IllegalMoveError("Move is blocked")
         # For move resulting in a self-check
         if self.move_results_in_own_check(s0=s0, s1=s1):
             raise IllegalMoveError("Move results in current player being checked.")
         return
+
+    def move_doesnt_resolve_check(self, s0: np.ndarray, s1: np.ndarray) -> bool:
+        king_pos = np.argwhere(self._board == 6 * self._turn)[0]  # Find position of player's king
+        if not self.square_is_attacked_by_opponent(king_pos):
+            return False
+
+        return True
 
     def move_principally_legal_for_piece(self, s0: np.ndarray, s1: np.ndarray) -> bool:
         move = s1 - s0
