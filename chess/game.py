@@ -371,12 +371,24 @@ class ChessGame:
         # minimum of the distance to each of the two edges along that direction.
         d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
         # Slice based on direction and distance to edge, to get the relevant part of the board
-        slicing = tuple(
-            [
-                s[i] if d[i] == 0 else slice(s[i] + d[i], s[i] + d[i] * (d_edge + 1), d[i])
-                for i in range(2)
-            ]
-        )
+        # slicing = tuple(
+        #     [
+        #         s[i] if d[i] == 0 else slice(s[i] + d[i], (s[i] + d[i] * (d_edge + 1) if s[i] + d[i] * (d_edge + 1) != -1 else None), d[i])
+        #         for i in range(2)
+        #     ]
+        # )
+        slicing = []
+        for i, d_i in enumerate(d):
+            if d_i == 0:
+                slicing.append(s[i])
+            elif d_i == 1:
+                slicing.append(slice(s[i]+1, s[i]+1+d_edge, 1))
+            else:
+                if s[i] > 0:
+                    slicing.append(slice(s[i]-1, (s[i]-1-d_edge if s[i]-1-d_edge > -1 else None), -1))
+                else:
+                    slicing.append(slice(s[i], s[i]))
+        slicing = tuple(slicing)
         sub_board = self._board[slicing]
         # For diagonal directions, slices are still 2d-arrays, but the slice was done in such a way
         # that all squares diagonal to the given square are now on the main diagonal of the new
