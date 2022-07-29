@@ -166,46 +166,57 @@ class ChessGame:
         # For move ending in a square occupied by current player's own pieces
         if self.square_belongs_to_current_player(s=s1):
             raise IllegalMoveError("End-square occupied by current player's piece.")
-        is_illegal, msg = self.move_illegal_for_piece(s0=s0, s1=s1)
-        if is_illegal:
-            raise IllegalMoveError(msg)
+        if not self.move_principally_legal_for_piece(s0=s0, s1=s1):
+            raise IllegalMoveError(
+                f"{self._PIECES[abs(self.piece_in_square(s0))].capitalize()}s "
+                f"cannot move in direction {s1- s0}."
+            )
+        if self.move_is_blocked(s0=s0, s1=s1):
+            raise IllegalMoveError("Move is blocked")
         # For move resulting in a self-check
         if self.move_results_in_own_check(s0=s0, s1=s1):
             raise IllegalMoveError("Move results in current player being checked.")
         return
 
-    def move_illegal_for_piece(self, s0: np.ndarray, s1: np.ndarray) -> Tuple[bool, str]:
+    def move_principally_legal_for_piece(self, s0: np.ndarray, s1: np.ndarray) -> bool:
         move = s1 - s0
         move_abs = np.abs(move)
-        move_dir = move // move_abs.max()
         move_manhattan_dist = move_abs.sum()
         piece = abs(self.piece_in_square(s0))
-        match piece:
-            case 1:
-                cond = (move[0] == self._turn and move_abs[1] < 2) or np.all(move == [2*self._turn, 0])
-            case 2:
-                cond = not(np.isin(3, move_abs) or move_manhattan_dist != 3)
-            case 3:
-                cond = move_abs[0] == move_abs[1]
-            case 4:
-                cond = np.isin(0, move_abs)
-            case 5:
-                cond = move_abs[0] == move_abs[1] or np.isin(0, move_abs)
-            case 6:
-                cond = move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
-        if not cond:
-            return True, f"{self._PIECES[piece].capitalize()}s cannot move in direction {move}."
+        if piece == 1:
+            return (move[0] == self._turn and move_abs[1] < 2) or np.all(move == [2*self._turn, 0])
         if piece == 2:
-            return False, ""
+            return not(move_manhattan_dist != 3 or np.isin(3, move_abs))
+        if piece == 3:
+            return move_abs[0] == move_abs[1]
+        if piece == 4:
+            return np.isin(0, move_abs)
+        if piece == 5:
+            return move_abs[0] == move_abs[1] or np.isin(0, move_abs)
+        if piece == 6:
+            return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
+
+    def move_is_blocked(self, s0: np.ndarray, s1: np.ndarray) -> bool:
+        """
+        Whether a straight-line way from start-square to end-square is blocked by any piece.
+        Does not work for knights (and doesn't need to).
+        """
+        if abs(self.piece_in_square(s=s0)) == 2:
+            return False
+        if self.square_belongs_to_current_player(s=s1):
+            return True
+        move_dir = np.sign(s1 - s0)
         neighbor, pos_neighbor = self.neighbor_in_direction(s=s0, d=move_dir)
-        neighbor_manhattan_dist = np.abs(pos_neighbor - s0).sum()
-        dif = neighbor_manhattan_dist - move_manhattan_dist
-        # Move is blocked when nearest neighbor is closer than the end-square
-        if neighbor_manhattan_dist >= move_manhattan_dist:
-            return False, ""
-        block_color = self._COLORS[np.sign(neighbor)]
-        block_piece = self._PIECES[abs(neighbor)]
-        return True, f"Move is blocked by {block_color}'s {block_piece} at {pos_neighbor}"
+        dif = pos_neighbor - s1
+        return np.all(np.sign(dif) == -move_dir)
+        # neighbor_manhattan_dist = np.abs(pos_neighbor - s0).sum()
+        # dif = neighbor_manhattan_dist - move_manhattan_dist
+        # # Move is blocked when nearest neighbor is closer than the end-square
+        # if neighbor_manhattan_dist >= move_manhattan_dist:
+        #     return False, ""
+        # block_color = self._COLORS[np.sign(neighbor)]
+        # block_piece = self._PIECES[abs(neighbor)]
+        # return True, f"Move is blocked by {block_color}'s {block_piece} at {pos_neighbor}"
 
     def piece_in_square(self, s: np.ndarray) -> int:
         """
