@@ -46,24 +46,41 @@ rect_row_labels = []
 for idx, label in enumerate("abcdefgh"):
     surf = font.render(label, True, "White")
     surf_column_labels.append(surf)
-    rect_column_labels.append(surf.get_rect(center=(
-        margin_board + (2*idx+1) * dim_square[0] / 2, dim_board[1]-margin_board/2)))
-    surf = font.render(str(8-idx), True, "White")
+    rect_column_labels.append(
+        surf.get_rect(
+            center=(
+                margin_board + (2 * idx + 1) * dim_square[0] / 2,
+                dim_board[1] - margin_board / 2,
+            )
+        )
+    )
+    surf = font.render(str(8 - idx), True, "White")
     surf_row_labels.append(surf)
-    rect_row_labels.append(surf.get_rect(center=(
-        margin_board/2 , margin_board + (2*idx+1) * dim_square[1] / 2)))
+    rect_row_labels.append(
+        surf.get_rect(center=(margin_board / 2, margin_board + (2 * idx + 1) * dim_square[1] / 2))
+    )
 
 
 surf_squares = []
 for pos in BLACK_SQUARE_POS:
     surf = pg.Surface(size=dim_square)
     surf.fill(color=COLOR_BLACK_SQUARE)
-    rect = surf.get_rect(topleft=(pos[1] * dim_square[0] + margin_board, dim_board[0] - margin_board - (pos[0]+1) * dim_square[1]))
+    rect = surf.get_rect(
+        topleft=(
+            pos[1] * dim_square[0] + margin_board,
+            dim_board[0] - margin_board - (pos[0] + 1) * dim_square[1],
+        )
+    )
     surf_squares.append([rect, surf, pos])
 for pos in WHITE_SQUARE_POS:
     surf = pg.Surface(size=dim_square)
     surf.fill(color=COLOR_WHITE_SQUARE)
-    rect = surf.get_rect(topleft=(pos[1] * dim_square[0] + margin_board, dim_board[0] - margin_board - (pos[0]+1) * dim_square[1]))
+    rect = surf.get_rect(
+        topleft=(
+            pos[1] * dim_square[0] + margin_board,
+            dim_board[0] - margin_board - (pos[0] + 1) * dim_square[1],
+        )
+    )
     surf_squares.append([rect, surf, pos])
 
 # surf_white_square = pg.Surface(size=dim_square)
@@ -73,15 +90,13 @@ for pos in WHITE_SQUARE_POS:
 # surf_black_square.fill(color=COLOR_BLACK_SQUARE)
 
 
-
 surf_pieces = dict()
 for i in range(1, 7):
     for j in [i, -i]:
-        surf = pg.transform.smoothscale(pg.image.load(f"graphics/pieces/{j}.png"), 0.9*dim_square)
+        surf = pg.transform.smoothscale(
+            pg.image.load(f"graphics/pieces/{j}.png"), 0.9 * dim_square
+        )
         surf_pieces[j] = surf
-
-
-
 
 
 screen.blit(source=surf_board, dest=(0, 0))
@@ -92,13 +107,13 @@ screen.blit(source=surf_board, dest=(0, 0))
 #     screen.blit(source=surf_white_square, dest=(pos[1] * dim_square[0] + margin_board, dim_board[0] - margin_board - (pos[0]+1) * dim_square[1]))
 
 
-
 for i in range(8):
     screen.blit(source=surf_column_labels[i], dest=rect_column_labels[i])
     screen.blit(source=surf_row_labels[i], dest=rect_row_labels[i])
 
 
 from game import ChessGame, IllegalMoveError
+
 game = ChessGame()
 
 move = []
@@ -124,17 +139,20 @@ while True:
         screen.blit(source=square[1], dest=square[0])
     for y, row in enumerate(game.board):
         for x, piece in enumerate(row):
-            if piece!=0:
+            if piece != 0:
                 surf = surf_pieces[piece]
-                rect = surf.get_rect(center=(margin_board + (2*x+1)* dim_square[0]/2, dim_board[1]-margin_board - (2*y+1)*dim_square[1]/2))
+                rect = surf.get_rect(
+                    center=(
+                        margin_board + (2 * x + 1) * dim_square[0] / 2,
+                        dim_board[1] - margin_board - (2 * y + 1) * dim_square[1] / 2,
+                    )
+                )
                 screen.blit(source=surf, dest=rect)
             # mouse_pos = pg.mouse.get_pos()
             # if rect.collidepoint(mouse_pos):
             #     print(y, x)
             #     if(pg.mouse.get_pressed()[0]):
             #         screen.blit(surf, mouse_pos)
-
-
 
     pg.display.update()
     clock.tick(FRAMERATE)

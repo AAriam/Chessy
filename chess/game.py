@@ -14,8 +14,7 @@ class ChessGame:
     # Equal to:
     # [vec for vec in itertools.permutations([-2, -1, 1, 2], 2) if abs(vec[0]) + abs(vec[1]) == 3]
     _KNIGHT_VECTORS = np.array(
-        [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]],
-        dtype=np.int8
+        [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
     )
 
     def __init__(self):
@@ -137,8 +136,8 @@ class ChessGame:
                 if self.piece_in_square(s1) != 0:
                     raise IllegalMoveError("The end-square is occupied.")
                 if (
-                        self.piece_in_square(s1 + [0, 1]) == -self._turn or
-                        self.piece_in_square(s1 + [0, -1]) == self._turn
+                    self.piece_in_square(s1 + [0, 1]) == -self._turn
+                    or self.piece_in_square(s1 + [0, -1]) == self._turn
                 ):
                     self._enpassant = s1[1]
             elif np.all(move_abs == [1, 0]):
@@ -158,7 +157,9 @@ class ChessGame:
                 if move_abs[1] == 2:  # Castling
                     if not self._can_castle[self._turn, move_dir[1]]:
                         raise IllegalMoveError("Castling is not allowed.")
-                    if self.piece_in_square(s1) != 0 or (move_dir[1]==-1 and self.piece_in_square(s1+move_dir) != 0):
+                    if self.piece_in_square(s1) != 0 or (
+                        move_dir[1] == -1 and self.piece_in_square(s1 + move_dir) != 0
+                    ):
                         raise IllegalMoveError("Castling is blocked.")
                     if self.square_is_attacked_by_opponent(s0 + move_dir):
                         raise IllegalMoveError("Castling way is under attack.")
@@ -231,9 +232,11 @@ class ChessGame:
         move_manhattan_dist = move_abs.sum()
         piece = abs(self.piece_in_square(s0))
         if piece == 1:
-            return (move[0] == self._turn and move_abs[1] < 2) or np.all(move == [2*self._turn, 0])
+            return (move[0] == self._turn and move_abs[1] < 2) or np.all(
+                move == [2 * self._turn, 0]
+            )
         if piece == 2:
-            return not(move_manhattan_dist != 3 or np.isin(3, move_abs))
+            return not (move_manhattan_dist != 3 or np.isin(3, move_abs))
         if piece == 3:
             return move_abs[0] == move_abs[1]
         if piece == 4:
@@ -324,9 +327,9 @@ class ChessGame:
         opp_pieces = -self._turn * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
         if (
-                opp_pieces[5] in neighbors or  # Queen attacking
-                opp_pieces[4] in neighbors[:4] or  # Rook attacking
-                opp_pieces[3] in neighbors[4:]  # Bishop attacking
+            opp_pieces[5] in neighbors
+            or opp_pieces[4] in neighbors[:4]  # Queen attacking
+            or opp_pieces[3] in neighbors[4:]  # Rook attacking  # Bishop attacking
         ):
             return True
         # For king and pawns, we also have to check whether they are in an adjacent square,
@@ -337,10 +340,11 @@ class ChessGame:
                 # Calculate distance vector from the square to that piece
                 dist_vec = piece_coordinates - s
                 if (
-                        # Piece is pawn, and it's one square away in an attacking direction
-                        (piece == opp_pieces[1] and dist_vec[0] == self._turn) or
-                        # Piece is king, and it's one square away in any direction
-                        (piece == opp_pieces[6] and np.abs(dist_vec).max() == 1)
+                    # Piece is pawn, and it's one square away in an attacking direction
+                    (piece == opp_pieces[1] and dist_vec[0] == self._turn)
+                    or
+                    # Piece is king, and it's one square away in any direction
+                    (piece == opp_pieces[6] and np.abs(dist_vec).max() == 1)
                 ):
                     return True
         # All criteria are checked, return False
@@ -366,7 +370,9 @@ class ChessGame:
         dir_move = s0_s1_vec // np.abs(s0_s1_vec).max()  # Move's direction vector
         # Knight's move cannot be along king direction,
         # because it's always landing in a different row, column, and diagonal.
-        if abs(self.piece_in_square(s0)) != 2 and (np.all(dir_move == dir_king) or np.all(dir_move == -dir_king)):
+        if abs(self.piece_in_square(s0)) != 2 and (
+            np.all(dir_move == dir_king) or np.all(dir_move == -dir_king)
+        ):
             return False
         # 3. If there is another piece between king and the square.
         kingside_neighbor = self.neighbor_in_direction(s=s0, d=dir_king)[0]
@@ -390,9 +396,7 @@ class ChessGame:
             pieces[idx], coords[idx] = self.neighbor_in_direction(s, direction)
         return pieces, coords
 
-    def neighbor_in_direction(
-            self, s: np.ndarray, d: np.ndarray
-    ) -> Tuple[int, np.ndarray]:
+    def neighbor_in_direction(self, s: np.ndarray, d: np.ndarray) -> Tuple[int, np.ndarray]:
         """
         Get type and coordinates of the nearest neighbor to a given square, in a given direction.
 
@@ -429,10 +433,14 @@ class ChessGame:
             if d_i == 0:
                 slicing.append(s[i])
             elif d_i == 1:
-                slicing.append(slice(s[i]+1, s[i]+1+d_edge, 1))
+                slicing.append(slice(s[i] + 1, s[i] + 1 + d_edge, 1))
             else:
                 if s[i] > 0:
-                    slicing.append(slice(s[i]-1, (s[i]-1-d_edge if s[i]-1-d_edge > -1 else None), -1))
+                    slicing.append(
+                        slice(
+                            s[i] - 1, (s[i] - 1 - d_edge if s[i] - 1 - d_edge > -1 else None), -1
+                        )
+                    )
                 else:
                     slicing.append(slice(s[i], s[i]))
         slicing = tuple(slicing)
