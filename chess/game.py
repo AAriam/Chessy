@@ -123,6 +123,62 @@ class ChessGame:
             return self._score
         return
 
+    def _update_game_state(self, s0: np.ndarray, s1: np.ndarray):
+
+        move = s1 - s0
+        move_abs = np.abs(move)
+        move_dir = np.sign(move)
+        piece = abs(self.piece_in_square(s0))
+
+        if piece == 1:
+            if np.all(move_abs == [2, 0]):
+                if s0[0] != (1 if self._turn == 1 else 6):
+                    raise IllegalMoveError("Pawn cannot move two squares after its first move.")
+                if self.piece_in_square(s1) != 0:
+                    raise IllegalMoveError("The end-square is occupied.")
+                if (
+                        self.piece_in_square(s1 + [0, 1]) == -self._turn or
+                        self.piece_in_square(s1 + [0, -1]) == self._turn
+                ):
+                    self._enpassant = s1[1]
+            elif np.all(move_abs == [1, 0]):
+                if self.piece_in_square(s1) != 0:
+                    raise IllegalMoveError("The end-square is occupied.")
+            else:
+                if self.piece_in_square(s1) == 0:
+                    if self._enpassant != s1[1]:
+                        raise IllegalMoveError("Pawn can only move diagonally when capturing.")
+                    else:
+                        self._board[s0[0], s1[1]] = 0  # Capture opponent's pawn enpassant
+                        self._enpassant = -1  # Reset enpassant allowance
+            self._fifty_move_draw_count = 0
+        else:
+            self._enpassant = -1  # If in this move no pawn is moved, then enpassant resets.
+            if piece == 6:
+                if move_abs[1] == 2:  # Castling
+                    if not self._can_castle[self._turn, move_dir[1]]:
+                        raise IllegalMoveError("Castling is not allowed.")
+                    if self.piece_in_square(s1) != 0 or (move_dir[1]==-1 and self.piece_in_square(s1+move_dir) != 0):
+                        raise IllegalMoveError("Castling is blocked.")
+                    if self.square_is_attacked_by_opponent(s0 + move_dir):
+                        raise IllegalMoveError("Castling way is under attack.")
+                    self._board[s0[0], 0 if move_dir[1] == -1 else 7] = 0  # Move the rook
+                    self._board[s0[0], s0[1] + move_dir[1]] = 4 * self._turn
+
+                self._can_castle[self._turn] = 0  # Turn off castling allowance
+            elif piece == 4:
+                if s0[0] == 0:
+                    self._can_castle[self._turn, -1] = 0
+                if s0[0] == 7:
+                    self._can_castle[self._turn, 1] = 0
+
+        if np.sign(self.piece_in_square(s1)) == -self._turn:
+            self._fifty_move_draw_count = 0
+        self._board[tuple(s1)] = self._board[tuple(s0)]
+        self._board[tuple(s0)] = 0
+        self._turn *= -1
+        return
+
     def raise_for_illegal_move(self, s0: np.ndarray, s1: np.ndarray) -> None:
         """
         Raise an IllegalMoveError if the given move is illegal.
