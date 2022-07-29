@@ -33,7 +33,7 @@ class ChessGame:
         self._turn: int = 1  # Whose turn it is; 1 for white, -1 for black
         # Castling allowance, first element is a dummy element, so that
         # `self._can_castle[self._turn]` gives the castling list of current player
-        self._can_castle: np.ndarray = np.array([[0, 0], [1, 1], [1, 1]], dtype=np.int8)
+        self._can_castle: np.ndarray = np.array([[0, 0, 0], [0, 1, 1], [0, 1, 1]], dtype=np.int8)
         self._enpassant: int = -1  # Column where en passant capture is allowed in next move
         self._fifty_move_draw_count: int = 0  # Count for the fifty move draw rule
         # Set other useful instance attributes
