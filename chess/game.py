@@ -136,8 +136,9 @@ class ChessGame:
                 if self.piece_in_square(s1) != 0:
                     raise IllegalMoveError("The end-square is occupied.")
                 if (
-                    self.piece_in_square(s1 + [0, 1]) == -self._turn
-                    or self.piece_in_square(s1 + [0, -1]) == self._turn
+                    s1[1] < 7 and self.piece_in_square(s1 + [0, 1]) == -self._turn
+                    or
+                    s1[1] > 0 and self.piece_in_square(s1 + [0, -1]) == -self._turn
                 ):
                     self._enpassant = s1[1]
             elif np.all(move_abs == [1, 0]):
