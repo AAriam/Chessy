@@ -96,7 +96,7 @@ class ChessGame:
         """
         return self._score
 
-    def move(self, s0: Tuple[int, int], s1: Tuple[int, int], promote_to: int = 0) -> Optional[int]:
+    def move(self, s0: Tuple[int, int], s1: Tuple[int, int], promote_to: int = 5) -> Optional[int]:
         """
         Make a move for the current player.
 
@@ -117,12 +117,12 @@ class ChessGame:
         s0 = np.array(s0, dtype=np.int8)
         s1 = np.array(s1, dtype=np.int8)
         self.raise_for_illegal_move(s0=s0, s1=s1)  # Otherwise, raise an error if move is illegal
-        self._update_game_state(s0=s0, s1=s1)  # Otherwise, apply the move and update state
+        self._update_game_state(s0=s0, s1=s1, promote_to=promote_to)  # Otherwise, apply the move and update state
         if self._game_over:  # Return white's score if the game is over after the move
             return self._score
         return
 
-    def _update_game_state(self, s0: np.ndarray, s1: np.ndarray):
+    def _update_game_state(self, s0: np.ndarray, s1: np.ndarray, promote_to: int):
 
         move = s1 - s0
         move_abs = np.abs(move)
@@ -150,6 +150,8 @@ class ChessGame:
                     else:
                         self._board[s0[0], s1[1]] = 0  # Capture opponent's pawn enpassant
                         self._enpassant = -1  # Reset enpassant allowance
+            if s1[0] == (7 if self._turn == 1 else 0):
+                self._board[tuple(s0)] = self._turn * promote_to
             self._fifty_move_draw_count = 0
         else:
             self._enpassant = -1  # If in this move no pawn is moved, then enpassant resets.
