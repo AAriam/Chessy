@@ -4,15 +4,15 @@ This module contains the abstract base class (abc) for all Chessboard classes.
 
 # Standard library
 from __future__ import annotations
-from typing import NamedTuple, Any, Tuple, Sequence
+from typing import NamedTuple, Any, Tuple, Sequence, NoReturn, Optional
 from abc import ABC, abstractmethod
 # 3rd party
 import numpy as np
 # Self
-from ..board_representation import BoardState
+from ..board_representation import BoardState, Move
 
 
-class Chessboard(ABC):
+class Judge(ABC):
     """
 
     """
@@ -23,38 +23,34 @@ class Chessboard(ABC):
 
     @classmethod
     @abstractmethod
-    def from_board_state(cls, board_state: BoardState) -> Chessboard:
+    def load_state(cls, state: BoardState) -> Judge:
         """
-        Create a new board from internal board representation model.
-        """
-        ...
-
-    @abstractmethod
-    def to_board_state(self) -> BoardState:
-        """
-        Transform board into internal board representation model.
+        Instantiate a new Judge for a given board state.
         """
         ...
 
     @abstractmethod
-    def generate_all_valid_moves(self) -> list[BoardState]:
+    def reveal_current_state(self) -> BoardState:
+        """
+        Generate a BoardState representation for current internal state.
+        """
+        ...
+
+    @abstractmethod
+    def generate_all_valid_moves(self) -> list[Move]:
         """
         Generate all valid moves for the current player.
         A move is represented as a new BoardState object.
         """
 
     @abstractmethod
-    def apply_move(
-            self, s0: Sequence[int, int], s1: Sequence[int, int], promote_to: int
-    ) -> BoardState:
+    def submit_move(self, move: Move) -> NoReturn:
         """
-        Apply a given move.
+        Apply a given move to the current state.
 
         Parameters
         ----------
-        s0 :
-        s1 :
-        promote_to : int
+
 
         Raises
         ------
@@ -62,8 +58,9 @@ class Chessboard(ABC):
             When the move is illegal.
         """
 
+    @property
     @abstractmethod
-    def move_is_promotion(self, s0: Sequence[int, int], s1: Sequence[int, int]) -> bool:
+    def move_is_promotion(self) -> bool:
         ...
 
     @property
@@ -78,6 +75,7 @@ class Chessboard(ABC):
         """
         ...
 
+    @property
     @abstractmethod
     def board_is_draw(self) -> bool:
         """
@@ -93,3 +91,6 @@ class Chessboard(ABC):
 class IllegalMoveError(Exception):
     pass
 
+
+class GameOverError(Exception):
+    pass
