@@ -3,7 +3,7 @@ This module contains the data structures and conventions used in the whole progr
 """
 
 # Standard library
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 # 3rd party
 import numpy as np
 
@@ -46,6 +46,22 @@ class BoardState(NamedTuple):
     enpassant_file: np.int8
     fifty_move_count: np.int8
     ply_count: np.int16
+
+
+class Move(NamedTuple):
+    """
+    A data structure representing a move in the game.
+
+    start_square : numpy.ndarray
+        Row and column index of the start square (both from 0 to 7), respectively.
+    end_square : Sequence[int, int]
+        Row and column index of the end square (both from 0 to 7), respectively.
+    promote_to : Optional[int]
+        Piece number to promote a pawn into, when the move is a promotion.
+    """
+    start_square: np.ndarray
+    end_square: np.ndarray
+    promote_to: Optional[np.int8] = None
 
 
 class Color(NamedTuple):
