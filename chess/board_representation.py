@@ -3,6 +3,7 @@ This module contains the data structures and conventions used in the whole progr
 """
 
 # Standard library
+from __future__ import annotations
 from typing import NamedTuple, Optional
 # 3rd party
 import numpy as np
@@ -46,6 +47,30 @@ class BoardState(NamedTuple):
     enpassant_file: np.int8
     fifty_move_count: np.int8
     ply_count: np.int16
+
+    @classmethod
+    def create_new_game(cls) -> BoardState:
+        """
+        Instantiate a new Chessboard in the starting position of a standard game.
+
+        Returns
+        -------
+        BoardState
+        """
+        # Set up board
+        board = np.zeros(shape=(8, 8), dtype=np.int8)  # Initialize an all-zero 8x8 array
+        board[(1, -2), ] = [1], [-1]  # Set white and black pawns on rows 2 and 7
+        board[0, :] = [4, 2, 3, 5, 6, 3, 2, 4]  # Set white's main pieces on row 1
+        board[-1, :] = -board[0]  # Set black's main pieces on row 8
+        # Set instance attributes describing the game state to their initial values
+        return cls(
+            board=board,
+            castling_rights=np.ones(shape=(2, 2), dtype=np.int8),
+            player=np.int8(1),
+            enpassant_file=np.int8(-1),
+            fifty_move_count=np.int8(0),
+            ply_count=np.int16(0),
+        )
 
 
 class Move(NamedTuple):
