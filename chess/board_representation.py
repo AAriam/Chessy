@@ -59,9 +59,17 @@ class Move(NamedTuple):
     promote_to : Optional[int]
         Piece number to promote a pawn into, when the move is a promotion.
     """
+
     start_square: np.ndarray
     end_square: np.ndarray
     promote_to: Optional[np.int8] = None
+
+    def __eq__(self, other):
+        return (
+            np.all(self.start_square == other.start_square)
+            and np.all(self.end_square == other.end_square)
+            and self.promote_to == other.promote_to
+        )
 
 
 class Color(NamedTuple):
