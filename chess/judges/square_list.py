@@ -175,113 +175,96 @@ class ArrayJudge(Judge):
         return valid_moves
 
     def generate_moves_for_square(self, s0: np.ndarray) -> list[Move]:
-        piece = self.piece_in_squares(ss=s0)
-        piece_type = self.piece_types(pp=piece)
+        piece_type = self.piece_types(ps=self.piece_in_squares(ss=s0))
         if piece_type == 0:
             return []
+
         move_dirs = self.MOVE_VECTORS[piece_type] * self.player
-        unpinned_mask = self.mask_absolute_pin(s0=s0, ds=move_dirs)
+        unpinned_mask = self.mask_absolute_pin(s=s0, ds=move_dirs)
         move_dirs_unpinned = move_dirs[unpinned_mask]
         if piece_type == 2:
             end_squares = s0 + move_dirs_unpinned
             inboards = end_squares[self.squares_are_inside_board(end_squares)]
             vacants = inboards[np.bitwise_not(self.squares_belong_to_player(inboards))]
-            moves = []
-            for vacant in vacants:
-                moves.append(Move(start_square=s0, end_square=vacant))
-            return moves
+            return self.generate_move_objects(s0=s0, s1s=vacants)
 
-        neighbor_positions = self.neighbor_square(s=s0, ds=move_dirs_unpinned)
-        move_mag_max = np.abs(neighbor_positions - s0).max(axis=1)
-
+        neighbor_positions = self.neighbor_squares(s=s0, ds=move_dirs_unpinned)
         neighbor_pieces = self.piece_in_squares(neighbor_positions)
         shift = self.pieces_belong_to_player(ps=neighbor_pieces)
-
         if piece_type == 1:
             shift[0] = np.bitwise_or(shift[0], self.pieces_belong_to_opponent(neighbor_pieces[0]))
-        if piece_type == 6:
+            move_mag_restricted = np.minimum(
+                np.abs(neighbor_positions - s0).max(axis=1) - shift,
+                self.pawn_move_restriction(s0=s0)[unpinned_mask]
+            )
+        elif piece_type == 6:
             shift[[2, -2]] = np.bitwise_or(
                 shift[[2, -2]], self.pieces_belong_to_opponent(neighbor_pieces[[2, -2]])
             )
-
-        move_mag_restricted = move_mag_max - shift
-
-        if piece_type == 1:
-            move_restriction = np.array(
-                [
-                    2 if s0[0] == (1 if self.player == 1 else 6) else 1,
-                    1
-                    if (
-                        s0[1] + move_dirs[1, 1] == self.enpassant_file
-                        or (
-                            self.squares_are_inside_board(ss=s0 + move_dirs[1])
-                            and self.squares_belong_to_opponent(ss=s0 + move_dirs[1])
-                        )
-                    )
-                    else 0,
-                    1
-                    if (
-                        s0[1] + move_dirs[2, 1] == self.enpassant_file
-                        or (
-                            self.squares_are_inside_board(ss=s0 + move_dirs[2])
-                            and self.squares_belong_to_opponent(ss=s0 + move_dirs[2])
-                        )
-                    )
-                    else 0,
-                ],
-                dtype=np.int8,
-            )[unpinned_mask]
-            move_mag_restricted = np.minimum(move_mag_restricted, move_restriction)
-        elif piece_type == 6:
-            move_restriction = np.ones(8, dtype=np.int8)
-            move_restriction[[2, -2]] += [
-                self.castling_right(side=1),
-                self.castling_right(side=-1)
-                and self.squares_are_empty(ss=np.array([0 if self.player == 1 else 7, 0])),
-            ]
-            move_restriction = move_restriction[unpinned_mask]
-            move_mag_restricted = np.minimum(move_mag_restricted, move_restriction)
-
+            move_mag_restricted = np.minimum(
+                np.abs(neighbor_positions - s0).max(axis=1) - shift,
+                self.king_move_restriction[unpinned_mask]
+            )
+        else:
+            move_mag_restricted = np.abs(neighbor_positions - s0).max(axis=1) - shift
         valid_move_mask = move_mag_restricted > 0
         valid_move_mags = move_mag_restricted[valid_move_mask]
         valid_move_dirs = move_dirs_unpinned[valid_move_mask]
-
-        valid_moves = []
-        for mag, d in zip(valid_move_mags, valid_move_dirs):
-            valid_moves.append((d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)))
+        valid_moves = [
+            d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)
+            for mag, d in zip(valid_move_mags, valid_move_dirs)
+        ]
         if not valid_moves:
             return []
 
         valid_moves = np.concatenate(valid_moves, dtype=np.int8)
         valid_s1s = (s0 + valid_moves).reshape((-1, 2))
+        if piece_type == 6:
+            valid_s1s = valid_s1s[self.king_wont_be_attacked(ss=valid_s1s)]
 
-        final_move_objs = []
-        if piece_type == 1:
-            for valid_s1 in valid_s1s:
-                if valid_s1[0] == (7 if self.player == 1 else 0):
-                    for promoted_piece in [2, 3, 4, 5]:
-                        final_move_objs.append(
-                            Move(
-                                start_square=s0,
-                                end_square=valid_s1,
-                                promote_to=np.int8(promoted_piece),
-                            )
-                        )
-                else:
-                    final_move_objs.append(
-                        Move(
-                            start_square=s0,
-                            end_square=valid_s1,
-                        )
-                    )
-        else:
-            if piece_type == 6:
-                valid_s1s = valid_s1s[self.king_wont_be_attacked(ss=valid_s1s)]
-            for valid_s1 in valid_s1s:
-                final_move_objs.append(Move(start_square=s0, end_square=valid_s1))
-        return final_move_objs
+        return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
 
-    def mask_absolute_pin(self, s0: np.ndarray, ds: np.ndarray) -> np.ndarray:
+    def pawn_move_restriction(self, s0):
+        move_dirs = self.MOVE_VECTORS[1] * self.player
+        return np.ndarray(
+            [
+                1 + self.pawn_not_yet_moved(s0),
+                self.pawn_can_capture_square(s0+move_dirs[1]),
+                self.pawn_can_capture_square(s0+move_dirs[2])
+            ],
+            dtype=np.int8
+        )
+
+    def pawn_not_yet_moved(self, s0):
+        return s0[0] == (1 if self.player == 1 else 6)
+
+    def pawn_can_capture_square(self, s1):
+        can_capture_enpassant = np.all(s1 == [(5 if self.player == 1 else 2), self.enpassant_file])
+        can_capture_normal = self.squares_are_inside_board(ss=s1) and self.squares_belong_to_opponent(ss=s1)
+        return can_capture_normal or can_capture_enpassant
+
+    @property
+    def king_move_restriction(self):
+        move_restriction = np.ones(8, dtype=np.int8)
+        move_restriction[[2, -2]] += [
+            self.castling_right(side=1),
+            self.castling_right(side=-1)
+            and self.squares_are_empty(ss=np.array([0 if self.player == 1 else 7, 1])),
+        ]
+        return move_restriction
+
+    def generate_move_objects(self, s0, s1s, is_pawn=False):
+        moves = []
+        for s1 in s1s:
+            moves.extend(
+                Move(s0, s1, promoted) for promoted in (
+                    np.array([2, 3, 4, 5], dtype=np.int8)
+                    if is_pawn and s1[0] == (7 if self.player == 1 else 0) else [None]
+                )
+            )
+        return moves
+
+    def mask_absolute_pin(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
         """
         Whether a given number of orthogonal/diagonal directions from a given square are free
         from breaking an absolute pin for the current player.
