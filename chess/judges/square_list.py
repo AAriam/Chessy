@@ -319,49 +319,75 @@ class ArrayJudge(Judge):
     def king(self):
         return self.player * 6
 
-    def attack_status(self, s: np.ndarray, attacking_player: np.int8 = None):
-        attacking_player = -self.player if attacking_player is None else attacking_player
-        s = np.expand_dims(s, axis=0) if s.ndim == 1 else s
+    def squares_checking(
+        self, s: Optional[np.ndarray] = None, p: Optional[np.int8] = None
+    ) -> np.ndarray:
+        """
+        Coordinates of squares containing a given player's pieces that currently
+        attack a given square. This is regardless of whether the player's pieces on those
+        squares are under absolute pin or not. Thus, this method returns the squares that
+        currently 'check' a given square.
+
+        Parameters
+        ----------
+        s : Optional[numpy.ndarray(shape=(2, ), dtype=numpy.int8)]
+            Coordinates of the square to be checked.
+            Defaults to the king square of the player that is not `p`.
+        p : Optional[numpy.int8]
+            Player whose pieces are attacking.
+            Defaults to the opponent of the current player.
+        Returns
+        -------
+        numpy.ndarray(shape=(n, 2), dtype=numpy.int8)]
+            Coordinates of the 'checking' squares.
+        """
+        p = -self.player if p is None else p
+        s = self.squares_of_piece(6 * -p)[0] if s is None else s
         # 1. CHECK FOR KNIGHT ATTACKS
         # Add given start-square to all knight vectors to get all possible attacking positions
         knight_pos = s + self.MOVE_VECTORS[2]
         # Take those end squares that are within the board
         inboards = knight_pos[self.squares_are_inside_board(ss=knight_pos)]
-        knight_presence = self.board[inboards[:, 0], inboards[:, 1]] == attacking_player * 2
+        mask_knight = self.board[inboards[:, 0], inboards[:, 1]] == p * 2
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get nearest neighbor in each direction
-        neighbors_pos = self.neighbor_square(s=s, ds=self.DIRECTION_UNIT_VECTORS)
+        neighbors_pos = self.neighbor_squares(s=s, ds=self.DIRECTION_UNIT_VECTORS)
         neighbors = self.piece_in_squares(neighbors_pos)
         # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
-        opp_pieces = attacking_player * np.arange(7, dtype=np.int8)
+        opp_pieces = p * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
-        king_presence = neighbors == opp_pieces[6]
-        queen_presence = neighbors == opp_pieces[5]
-        rook_presence = neighbors[::2] == opp_pieces[4]
-        bishop_presence = neighbors[1::2] == opp_pieces[3]
-        pawn_presence = neighbors[1::2] == opp_pieces[1]
-        if np.any(pawn_presence):
+        mask_king = neighbors == opp_pieces[6]
+        mask_queen = neighbors == opp_pieces[5]
+        mask_rook = neighbors[::2] == opp_pieces[4]
+        mask_bishop = neighbors[1::2] == opp_pieces[3]
+        mask_pawn = neighbors[1::2] == opp_pieces[1]
+        if np.any(mask_pawn):
             dist_vecs = neighbors_pos[1::2] - s
-            pawn_restriction = dist_vecs[:, 0] == -attacking_player
-            pawn_presence = np.bitwise_and(pawn_restriction, pawn_presence)
-        if np.any(king_presence):
+            pawn_restriction = dist_vecs[:, 0] == -p
+            mask_pawn = np.bitwise_and(pawn_restriction, mask_pawn)
+        if np.any(mask_king):
             dist_vecs = neighbors_pos - s
             king_restriction = np.abs(dist_vecs).max(axis=1) == 1
-            king_presence = np.bitwise_and(king_restriction, king_presence)
+            mask_king = np.bitwise_and(king_restriction, mask_king)
         attacking_positions = np.concatenate(
             [
-                inboards[knight_presence],
-                neighbors_pos[king_presence],
-                neighbors_pos[queen_presence],
-                neighbors_pos[::2][rook_presence],
-                neighbors_pos[1::2][bishop_presence],
-                neighbors_pos[1::2][pawn_presence],
+                inboards[mask_knight],
+                neighbors_pos[mask_king],
+                neighbors_pos[mask_queen],
+                neighbors_pos[::2][mask_rook],
+                neighbors_pos[1::2][mask_bishop],
+                neighbors_pos[1::2][mask_pawn],
             ]
         )
-        # num_attacking_pieces = attacking_positions.shape[0]
-        # if num_attacking_pieces == 0:
-        #     return None
         return attacking_positions
+
+    def squares_attacking(self, s: np.ndarray, p: Optional[np.int8] = None) -> np.ndarray:
+        squares_checking = self.squares_checking(s=s, p=p)
+        unpin_mask = []
+        for square in squares_checking:
+            move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0=square, s1=s)
+            unpin_mask.append(self.mask_absolute_pin(s=square, ds=np.expand_dims(move_uv))[0])
+        return squares_checking[unpin_mask]
 
     def king_wont_be_attacked(self, ss: np.ndarray):
         king_pos = tuple(self.position_king)
@@ -384,9 +410,10 @@ class ArrayJudge(Judge):
         ]
         # In case of single checks, get the moves that block or capture the attacking piece.
         if attacking_squares.shape[0] == 1:
-            # Find moves that block or capture the attacking piece.
-            attacking_positions = self.attack_status(
-                s=attacking_squares, attacking_player=self.player
+            # Find capturing moves
+            attacking_positions = self.squares_attacking(s=attacking_squares[0], p=self.player)
+            unpinned_mask = self.mask_absolute_pin(
+                s=attacking_squares[0], ds=attacking_squares[0] - attacking_positions
             )
             unpinned_mask = self.mask_absolute_pin(s0=attacking_squares[0], ds=attacking_squares[0] - attacking_positions)
             available_capturing_positions = attacking_positions[unpinned_mask]
