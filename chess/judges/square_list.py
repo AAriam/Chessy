@@ -465,14 +465,17 @@ class ArrayJudge(Judge):
             If the squares are the same, or not on an orthogonal/diagonal direction, then
             an empty array of shape (0, 2) is returned.
         """
-        move = s1 - s0
-        move_abs = np.abs(move)
-        move_mag = move_abs.max()
-        # If not on a diagonal or orthogonal ray
-        if move_abs[0] != move_abs[1] and np.isin(0, move_abs, invert=True):
-            move_mag = 1  # This will make the range empty, while no DivideByZero error occurs
-        move_dir = move // move_mag
-        return s0 + np.arange(1, move_mag, dtype=np.int8)[:, np.newaxis] * move_dir
+        move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0=s0, s1=s1)
+        in_between_squares = (
+            s0
+            + np.arange(
+                1,
+                move_vm if is_cardinal else 1,  # If not on a cardinal ray, make the range empty
+                dtype=np.int8,
+            )[:, np.newaxis]
+            * move_uv
+        )
+        return in_between_squares
 
     @staticmethod
     def move_dir_mag(
