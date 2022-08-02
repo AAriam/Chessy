@@ -364,15 +364,15 @@ class ArrayJudge(Judge):
         return attacking_positions
 
     def king_wont_be_attacked(self, ss: np.ndarray):
-        king_pos = self.squares_of_piece(6 * self.player)[0]
-        self.board[tuple(king_pos)] = 0  # temporarily remove king from board
-        square_is_not_attacked = [self.attack_status(s=square).size == 0 for square in ss]
-        self.board[tuple(king_pos)] = 6 * self.player
+        king_pos = tuple(self.position_king)
+        self.board[king_pos] = 0  # temporarily remove king from board
+        square_is_not_attacked = [self.squares_checking(s=square).size == 0 for square in ss]
+        self.board[king_pos] = self.king  # put it back
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
     def moves_resolving_check(self, attacking_squares: np.ndarray):
         # Get the squares the king can move into to resolve check.
-        king_pos = self.squares_of_piece(6 * self.player)[0]
+        king_pos = self.position_king
         possible_squares = king_pos + self.DIRECTION_UNIT_VECTORS
         inboard_squares = possible_squares[self.squares_are_inside_board(ss=possible_squares)]
         vacant_squares = inboard_squares[
