@@ -474,6 +474,16 @@ class ArrayJudge(Judge):
         move_dir = move // move_mag
         return s0 + np.arange(1, move_mag, dtype=np.int8)[:, np.newaxis] * move_dir
 
+    @staticmethod
+    def move_dir_mag(
+        s0: np.ndarray, s1: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.int8, bool]:
+        move_vect = s1 - s0
+        move_vect_multiplier = np.gcd(*move_vect)
+        move_unit_vect = move_vect // move_vect_multiplier
+        # is_cardinal: whether it's a non-zero move along a cardinal direction
+        is_cardinal = np.abs(move_unit_vect).max() == 1
+        return move_vect, move_unit_vect, move_vect_multiplier, is_cardinal
 
     @property
     def move_is_promotion(self) -> bool:
