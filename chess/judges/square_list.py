@@ -571,7 +571,7 @@ class ArrayJudge(Judge):
         return np.all(np.all([ss < 8, ss > -1], axis=0), axis=1)
 
     @staticmethod
-    def piece_types(pp: Union[np.int8, np.ndarray]) -> Union[np.int8, np.ndarray]:
+    def piece_types(ps: Union[np.int8, np.ndarray]) -> Union[np.int8, np.ndarray]:
         """
         Piece-type of a number of given pieces.
         Piece-type is the absolute value of a piece data, as defined in `BoardState`, i.e.
@@ -579,14 +579,14 @@ class ArrayJudge(Judge):
 
         Parameters
         ----------
-        pp : Union[np.int8, np.ndarray]
+        ps : Union[np.int8, np.ndarray]
             Piece data as defined by `BoardState`.
         Returns
         -------
         Union[np.int8, np.ndarray]
             Piece-type, either as a single integer, or an array of integers, depending on input.
         """
-        return np.abs(pp)
+        return np.abs(ps)
 
     @staticmethod
     def move_principally_legal_for_piece(p: np.int8, move_vect: np.ndarray) -> bool:
