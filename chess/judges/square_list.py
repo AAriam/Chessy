@@ -616,17 +616,21 @@ class ArrayJudge(Judge):
         Parameters
         ----------
         ss : numpy.ndarray
-          Either the coordinates of a single square (shape (2,)),
-          or n squares (shape(n, 2)).
+          Coordinates of n squares as an array of x dimensions
+          with shape (s_1, s_2, ..., s_{x-1}, 2), where the last dimension
+          corresponds to the file/rank coordinates. For the rest of the dimensions,
+          it holds that:  s_1 * s_2 * ... * s_{x-1} = n
 
         Returns
         -------
         numpy.ndarray
-          A 1d boolean array with same size as number of input squares.
+          A boolean value (when ss.shape=(2,)) or array with shape (s_1, s_2, ..., s_{x-1}).
         """
-        if ss.ndim == 1:
-            ss = np.expand_dims(ss, axis=0)
-        return np.all(np.all([ss < 8, ss > -1], axis=0), axis=1)
+        # if ss.ndim == 1:
+        #     ss = np.expand_dims(ss, axis=0)
+        # return np.all(np.all([ss < 8, ss > -1], axis=0), axis=1)
+        rank_file_inside_board = np.bitwise_and(ss > -1, ss < 8)
+        return np.bitwise_and(rank_file_inside_board[..., 0], rank_file_inside_board[..., 1])
 
     @staticmethod
     def piece_types(ps: Union[np.int8, np.ndarray]) -> Union[np.int8, np.ndarray]:
