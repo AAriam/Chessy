@@ -410,7 +410,13 @@ class ArrayJudge(Judge):
 
         return resolving_moves
 
-    def neighbor_square(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
+    def neighbor_squares(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
+        neighbor_positions = []
+        for d in ds:
+            neighbor_positions.append(self.neighbor_square(s=s, d=d))
+        return np.array(neighbor_positions)
+
+    def neighbor_square(self, s: np.ndarray, d: np.ndarray) -> np.ndarray:
         """
         Coordinates of the nearest neighbor to a given square, in a given direction.
 
@@ -418,7 +424,7 @@ class ArrayJudge(Judge):
         ----------
         s : numpy.ndarray(shape=(2,), dtype=np.int8)
             Coordinates of the square.
-        ds : numpy.ndarray(shape=(2,), dtype=np.int8)
+        d : numpy.ndarray(shape=(2,), dtype=np.int8)
             Direction from that square.
             For example, `[1, -1]` means top-left (diagonal), and `[1, 0]` means top.
 
@@ -434,52 +440,19 @@ class ArrayJudge(Judge):
         # Calculate distance to the nearest relevant edge. For orthogonal directions, this is the
         # distance to the edge along that direction. For diagonal directions, this is the
         # minimum of the distance to each of the two edges along that direction.
-        distance_to_each_edge = np.where(ds == 1, 7 - s, s)
-        distance_to_each_edge[ds == 0] = 8
-        d_edge = distance_to_each_edge.min(axis=1)
-        # Slice based on direction and distance to edge, to get the relevant part of the board
-        # slicing = tuple(
-        #     [
-        #         s[i] if d[i] == 0 else slice(s[i] + d[i], (s[i] + d[i] * (d_edge + 1) if s[i] + d[i] * (d_edge + 1) != -1 else None), d[i])
-        #         for i in range(2)
-        #     ]
-        # )
-        s = s[0] if s.ndim == 2 else s
-        neighbor_positions = []
-        for idx, d in enumerate(ds):
-            slicing = []
-            for i, d_i in enumerate(d):
-                if d_i == 0:
-                    slicing.append(s[i])
-                elif d_i == 1:
-                    slicing.append(slice(s[i] + 1, s[i] + 1 + d_edge[idx], 1))
-                else:
-                    if s[i] > 0:
-                        slicing.append(
-                            slice(
-                                s[i] - 1,
-                                (s[i] - 1 - d_edge[idx] if s[i] - 1 - d_edge[idx] > -1 else None),
-                                -1,
-                            )
-                        )
-                    else:
-                        slicing.append(slice(s[i], s[i]))
-            slicing = tuple(slicing)
-            sub_board = self.board[slicing]
-            # For diagonal directions, slices are still 2d-arrays, but the slice was done in such a way
-            # that all squares diagonal to the given square are now on the main diagonal of the new
-            # slice, and can be extracted.
-            line = sub_board if 0 in d else np.diagonal(sub_board)
-            # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
-            neighbors_idx = np.nonzero(line)[0]
-            # If there are now neighbors in that direction, the index array will be empty. In this case
-            # we return the type and position of the last empty square in that direction. Otherwise,
-            # the first element corresponds to the index of nearest neighbor in that direction. To that,
-            # add 1 to get distance of square to the nearest piece
-            # Based on direction and distance, calculate and return index of the neighbor
-            pos = s + d * (d_edge[idx] if neighbors_idx.size == 0 else neighbors_idx[0] + 1)
-            neighbor_positions.append(pos)
-        return np.array(neighbor_positions, dtype=np.int8)
+        d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
+        # Get the square-indices that lie in that direction, up until the edge
+        squares_along_d = self.squares_in_between(s0=s, s1=s + (d_edge + 1) * d)
+        if squares_along_d.size == 0:
+            return s
+        # Get the corresponding square occupancies.
+        sub_board = self.board[squares_along_d[:, 0], squares_along_d[:, 1]]
+        # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
+        neighbors_idx = np.nonzero(sub_board)[0]
+        # If there are no neighbors in that direction, the index array will be empty. In this case
+        # we return the position of the last empty square in that direction. Otherwise,
+        # the first element corresponds to the index of nearest neighbor in that direction.
+        return squares_along_d[neighbors_idx[0] if neighbors_idx.size != 0 else -1]
 
     @staticmethod
     def squares_in_between(s0: np.ndarray, s1: np.ndarray) -> np.ndarray:
