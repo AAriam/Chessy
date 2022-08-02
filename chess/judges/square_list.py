@@ -61,6 +61,7 @@ class ArrayJudge(Judge):
         self.is_check: bool = False
         self.is_draw: bool = False
         self.valid_moves: list[Move] = []
+        self.analyze_state()
         return
 
     @classmethod
@@ -85,8 +86,8 @@ class ArrayJudge(Judge):
         )
 
     def submit_move(self, move: Move) -> NoReturn:
-        #if self.state_not_yet_analyzed:
-        self.generate_all_valid_moves()
+        if self.state_not_yet_analyzed:
+            self.generate_all_valid_moves()
         if self.is_checkmate:
             raise GameOverError("Game over. Current player is checkmated.")
         if self.is_draw:
@@ -158,19 +159,28 @@ class ArrayJudge(Judge):
         return
 
     def generate_all_valid_moves(self) -> list[Move]:
-        cheking_squares = self.check_status
-        if cheking_squares.size != 0:
-            self.is_check = True
-            valid_moves = self.moves_resolving_check(attacking_squares=cheking_squares)
-            if not valid_moves:
-                self.is_checkmate = True
+        if self.state_not_yet_analyzed:
+            self.analyze_state()
+        return self.valid_moves
+
+    def analyze_state(self):
+        if self.fifty_move_count == 100 or self.is_dead_position:
+            self.is_draw = True
+            self.valid_moves = []
         else:
-            valid_moves = []
-            for square in self.squares_of_player:
-                valid_moves.extend(self.generate_moves_for_square(square))
-            if not valid_moves:
-                self.is_draw = True
-        self.valid_moves = valid_moves
+            cheking_squares = self.squares_checking()
+            if cheking_squares.size != 0:
+                self.is_check = True
+                valid_moves = self.moves_resolving_check(attacking_squares=cheking_squares)
+                if not valid_moves:
+                    self.is_checkmate = True
+            else:
+                valid_moves = []
+                for square in self.squares_of_player:
+                    valid_moves.extend(self.generate_moves_for_square(square))
+                if not valid_moves:
+                    self.is_draw = True
+            self.valid_moves = valid_moves
         self.state_not_yet_analyzed = False
         return valid_moves
 
