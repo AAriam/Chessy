@@ -501,14 +501,36 @@ class ArrayJudge(Judge):
         return in_between_squares
 
     @staticmethod
-    def move_dir_mag(
-        s0: np.ndarray, s1: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray, np.int8, bool]:
-        move_vect = s1 - s0
-        move_vect_multiplier = np.gcd(*move_vect)
-        move_unit_vect = move_vect // move_vect_multiplier
-        # is_cardinal: whether it's a non-zero move along a cardinal direction
-        is_cardinal = np.abs(move_unit_vect).max() == 1
+    def move_dir_mag(s0s: np.ndarray, s1s: np.ndarray) -> tuple:
+        """
+        Vector properties for between a number of start and end-squares.
+
+        Parameters
+        ----------
+        s0s : numpy.ndarray
+            Coordinates of n start-squares as an array of x dimensions
+            with shape (s_1, s_2, ..., s_{x-1}, 2), where the last dimension
+            corresponds to the file/rank coordinates. For the rest of the dimensions,
+            it holds that:  s_1 * s_2 * ... * s_{x-1} = n
+        s1s : numpy.ndarray
+            Coordinates of n end-squares as an array with same shape as `s0s`.
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray, Union[np.ndarray, np.int8], Union[np.ndarray, bool]]
+            [0]: Vectors from s0s to s1s, as an array with same shape as s0s/s1s.
+            [1]: Corresponding smallest-int (unit) vectors, as an array with same shape as s0s/s1s.
+            [2]: Unit vector multipliers (i.e. the numbers that multiplied with corresponding
+                 unit vectors give the original vectors) as an array with shape
+                 (s_1, s_2, ..., s_{x-1}), or an integer when `s0s` and `s1s` are 1-dimensional.
+            [3]: Whether the vectors are cardinal (i.e. non-zero and along a cardinal direction),
+                 as a boolean array with shape (s_1, s_2, ..., s_{x-1}), or a single boolean when
+                 `s0s` and `s1s` are 1-dimensional.
+        """
+        move_vect = s1s - s0s
+        move_vect_multiplier = np.gcd(move_vect[..., 0], move_vect[..., 1])
+        move_unit_vect = move_vect // move_vect_multiplier[:, np.newaxis]
+        is_cardinal = np.abs(move_unit_vect).max(axis=-1) == 1
         return move_vect, move_unit_vect, move_vect_multiplier, is_cardinal
 
     @property
