@@ -135,10 +135,10 @@ class ArrayJudge(Judge):
                 piece_at_end_square = move.promote_to * self.player
             if np.all(move_vec_mag == [1, 1]) and captured_piece == 0:
                 self.board[move.end_square[0] - self.player, move.end_square[1]] = 0
-            if move_vec_mag[0] == 2:
-                self.enpassant_file = move.end_square[1]
+            self.enpassant_file = move.end_square[1] if move_vec_mag[0] == 2 else -1
         else:
             self.enpassant_file = -1
+            # Apply castling and/or modify castling rights
             if moving_piece_type == 6:
                 self.castling_rights[self.player] = 0
                 if move_vec_mag[1] == 2:
