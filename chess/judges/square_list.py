@@ -281,7 +281,7 @@ class ArrayJudge(Judge):
 
         Parameters
         ----------
-        s0 : numpy.ndarray(shape=(2,), dtype=numpy.int8)
+        s : numpy.ndarray(shape=(2,), dtype=numpy.int8)
             Coordinates of the square.
         ds : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
             A 2d-array of orthogonal/diagonal directions.
@@ -294,27 +294,30 @@ class ArrayJudge(Judge):
         # A move from a given square cannot break a pin, if:
         # (notice that the order matters, i.e. checking later criteria without first having checked
         # all the earlier ones may result in a wrong conclusion)
-        # 1. If the piece and king are not on the same row, same column, or same diagonal.
-        king_pos = self.squares_of_piece(6 * self.player)[0]  # Find position of player's king
-        s0_king_vec = king_pos - s0  # Distance vector from start square to king square
-        s0_king_vec_abs = np.abs(s0_king_vec)
-        if not np.isin(0, s0_king_vec) and s0_king_vec_abs[0] != s0_king_vec_abs[1]:
+        # 1. If the square-king (sk) vector is not cardinal, then regardless of direction,
+        # no move from that square is pinned.
+        sk_v, sk_uv, sk_vm, is_cardinal = ArrayJudge.move_dir_mag(s0=s, s1=self.position_king)
+        if not is_cardinal:
             return np.ones(shape=ds.shape[0], dtype=np.bool_)
-
-        dir_king = s0_king_vec // s0_king_vec_abs.max()  # King's direction vector
-        neighbors_pos = self.neighbor_square(s=s0, ds=np.array([dir_king, -dir_king]))
-        neighbors_pieces = self.piece_in_squares(ss=neighbors_pos)
-        if (
-            neighbors_pieces[0] != 6 * self.player
-            or (not self.pieces_belong_to_opponent(neighbors_pieces[1]))
-            or neighbors_pieces[1] not in (np.array([5, 4 if 0 in dir_king else 3]) * -self.player)
+        # 2. If there is a piece between the square and the king, or to the other side
+        # of the square, along the sk vector, or the piece on the other side is not attacking
+        kingside_neigh, otherside_neigh = self.piece_in_squares(
+            ss=self.neighbor_squares(s=s, ds=np.array([sk_uv, -sk_uv]))
+        )
+        if kingside_neigh != self.king or np.isin(
+            otherside_neigh, np.array([5, 4 if 0 in sk_uv else 3]) * -self.player, invert=True
         ):
             return np.ones(shape=ds.shape[0], dtype=np.bool_)
-        return np.bitwise_or(np.all(ds == dir_king, axis=1), np.all(ds == -dir_king, axis=1))
+        # 3. Otherwise, only directions along the sk-vector are not pinned.
+        return np.bitwise_or(np.all(ds == sk_uv, axis=1), np.all(ds == -sk_uv, axis=1))
 
     @property
-    def check_status(self):
-        return self.attack_status(s=self.squares_of_piece(6 * self.player))
+    def position_king(self):
+        return self.squares_of_piece(self.king)[0]
+
+    @property
+    def king(self):
+        return self.player * 6
 
     def attack_status(self, s: np.ndarray, attacking_player: np.int8 = None):
         attacking_player = -self.player if attacking_player is None else attacking_player
