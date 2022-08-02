@@ -373,27 +373,18 @@ class ArrayJudge(Judge):
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
     def moves_resolving_check(self, attacking_squares: np.ndarray):
-
-        # Get the squares the king can move into to resolve check. These are the squares
-        # that i) don't lie under any current attack rays
-        king_pos = self.squares_of_piece(6 * self.player)
-        # attack_vects = (attacking_squares - king_pos)[:, np.newaxis]
-        # possible_directions = self.DIRECTION_UNIT_VECTORS[
-        #     np.all(np.any(self.DIRECTION_UNIT_VECTORS != attack_vects, axis=2), axis=0)
-        # ]
-        # possible_squares = king_pos + possible_directions
+        # Get the squares the king can move into to resolve check.
+        king_pos = self.squares_of_piece(6 * self.player)[0]
         possible_squares = king_pos + self.DIRECTION_UNIT_VECTORS
         inboard_squares = possible_squares[self.squares_are_inside_board(ss=possible_squares)]
         vacant_squares = inboard_squares[
             np.bitwise_not(self.squares_belong_to_player(inboard_squares))
         ]
-        self.board[tuple(king_pos[0])] = 0  # temporarily remove king from board
-        resolving_moves = []
-        for vacant_square in vacant_squares:
-            attacking_positions = self.attack_status(s=vacant_square)
-            if attacking_positions.size == 0:
-                resolving_moves.append(Move(start_square=king_pos, end_square=vacant_square))
-        self.board[tuple(king_pos[0])] = 6 * self.player  # put the king back
+        safe_squares = vacant_squares[self.king_wont_be_attacked(ss=vacant_squares)]
+        resolving_moves = [
+            Move(start_square=king_pos, end_square=safe_square) for safe_square in safe_squares
+        ]
+        # In case of single checks, get the moves that block or capture the attacking piece.
         if attacking_squares.shape[0] == 1:
             # Find moves that block or capture the attacking piece.
             attacking_positions = self.attack_status(
