@@ -565,16 +565,22 @@ class ArrayJudge(Judge):
 
     def piece_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
         """
-        Get the type of piece(s) on given square(s) (or 0 if empty).
+        Get the type of pieces on a given number of squares.
+
+        Parameters
+        ----------
+        ss : numpy.ndarray
+          Coordinates of n squares as an array of x dimensions
+          with shape (s_1, s_2, ..., s_{x-1}, 2), where the last dimension
+          corresponds to the file/rank coordinates. For the rest of the dimensions,
+          it holds that:  s_1 * s_2 * ... * s_{x-1} = n
 
         Returns
         -------
         Union[np.ndarray, np.int8]
+            Piece types as a single integer (when `ss` is 1-dimensional) or a 1d-array of size n.
         """
-        single_square = ss.ndim == 1
-        ss = np.expand_dims(ss, axis=0) if single_square else ss
-        pieces = self.board[ss[:, 0], ss[:, 1]]
-        return pieces[0] if single_square else pieces
+        return self.board[ss[..., 0], ss[..., 1]]
 
     def squares_of_piece(self, p: np.int8):
         return np.argwhere(self.board == p)
