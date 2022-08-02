@@ -124,11 +124,12 @@ class ArrayJudge(Judge):
         moving_piece_type = self.piece_types(piece_at_end_square)
         captured_piece = self.piece_in_squares(ss=move.end_square)
         if captured_piece != 0:
-            self.fifty_move_count = 0
+            self.fifty_move_count = -1
         move_vec = move.end_square - move.start_square
         move_vec_mag = np.abs(move_vec)
         if moving_piece_type == 1:
-            self.fifty_move_count = 0
+            # Handle promotions and en passant
+            self.fifty_move_count = -1
             if move.promote_to is not None:
                 piece_at_end_square = move.promote_to * self.player
             if np.all(move_vec_mag == [1, 1]) and captured_piece == 0:
@@ -151,6 +152,7 @@ class ArrayJudge(Judge):
                     self.castling_rights[self.player, 1] = 0
         self.board[tuple(move.end_square)] = piece_at_end_square
         self.board[tuple(move.start_square)] = 0
+        self.fifty_move_count += 1
         self.player *= -1
         self.state_not_yet_analyzed = True
         return
