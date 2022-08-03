@@ -202,15 +202,14 @@ class ArrayJudge(Judge):
         neighbor_pieces = self.piece_in_squares(neighbor_positions)
         shift = self.pieces_belong_to_player(ps=neighbor_pieces)
         if piece_type == 1:
-            shift[0] = np.bitwise_or(shift[0], self.pieces_belong_to_opponent(neighbor_pieces[0]))
+            shift[0] = shift[0] | self.pieces_belong_to_opponent(neighbor_pieces[0])
             move_mag_restricted = np.minimum(
                 np.abs(neighbor_positions - s0).max(axis=1) - shift,
                 self.pawn_move_restriction(s0=s0)[unpinned_mask]
             )
         elif piece_type == 6:
-            shift[[2, -2]] = np.bitwise_or(
-                shift[[2, -2]], self.pieces_belong_to_opponent(neighbor_pieces[[2, -2]])
-            )
+            shift[[2, -2]] = shift[[2, -2]] | self.pieces_belong_to_opponent(neighbor_pieces[[2, -2]])
+
             move_mag_restricted = np.minimum(
                 np.abs(neighbor_positions - s0).max(axis=1) - shift,
                 self.king_move_restriction[unpinned_mask]
@@ -309,7 +308,7 @@ class ArrayJudge(Judge):
         ):
             return np.ones(shape=ds.shape[0], dtype=np.bool_)
         # 3. Otherwise, only directions along the sk-vector are not pinned.
-        return np.bitwise_or(np.all(ds == sk_uv, axis=1), np.all(ds == -sk_uv, axis=1))
+        return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
 
     @property
     def position_king(self):
@@ -364,11 +363,11 @@ class ArrayJudge(Judge):
         if np.any(mask_pawn):
             dist_vecs = neighbors_pos[1::2] - s
             pawn_restriction = dist_vecs[:, 0] == -p
-            mask_pawn = np.bitwise_and(pawn_restriction, mask_pawn)
+            mask_pawn = pawn_restriction & mask_pawn
         if np.any(mask_king):
             dist_vecs = neighbors_pos - s
             king_restriction = np.abs(dist_vecs).max(axis=1) == 1
-            mask_king = np.bitwise_and(king_restriction, mask_king)
+            mask_king = king_restriction & mask_king
         attacking_positions = np.concatenate(
             [
                 inboards[mask_knight],
@@ -635,8 +634,8 @@ class ArrayJudge(Judge):
         # if ss.ndim == 1:
         #     ss = np.expand_dims(ss, axis=0)
         # return np.all(np.all([ss < 8, ss > -1], axis=0), axis=1)
-        rank_file_inside_board = np.bitwise_and(ss > -1, ss < 8)
-        return np.bitwise_and(rank_file_inside_board[..., 0], rank_file_inside_board[..., 1])
+        rank_file_inside_board = ss > -1 & ss < 8
+        return rank_file_inside_board[..., 0] & rank_file_inside_board[..., 1]
 
     @staticmethod
     def piece_types(ps: Union[np.int8, np.ndarray]) -> Union[np.int8, np.ndarray]:
