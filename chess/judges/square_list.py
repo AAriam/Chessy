@@ -229,18 +229,50 @@ class ArrayJudge(Judge):
         return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
 
     def generate_QRBN_moves(self, piece_type: int):
+
+        def update_view(mask):
+            nonlocal s0s_valid, s1s_valid
+            s0s_valid = s0s_valid[mask]
+            s1s_valid = s1s_valid[mask]
+
+        def mask_can_move_into():
+            if piece_type == 13:
+                # For pawn captures
+                return self.squares_belong_to_opponent(ss=s1s_valid) | \
+                       self.is_enpassant_square(ss=s1s_valid)
+            elif piece_type == 12:
+                return s0s_valid[..., 0] == (1 if self.player == 1 else 6) & \
+                       ~self.squares_belong_to_player(ss=s0s_valid + [1, 0]) & \
+                       ~self.squares_belong_to_player(ss=s1s_valid)
+            elif piece_type == 62:
+                b_file_empty = np.array([True, True], dtype=np.bool_)
+                b_file_empty[0 if self.player == 1 else 1] = self.squares_are_empty(ss=s1s_valid[0 if self.player == 1 else 1] - [0, 1])
+                return (
+                        self.castling_rights[self.player, [-self.player, self.player]] &
+                        self.squares_are_empty(ss=s1s_valid) &
+                        self.squares_are_empty(ss=s1s_valid - [[0, -self.player], [0, self.player]]) &
+                        b_file_empty
+                )
+            else:
+                return ~self.squares_belong_to_player(ss=s1s_valid)
+        def check_mask():
+            if piece_type == 61:
+                return self.king_wont_be_attacked(ss=s1s_valid)
+            elif piece_type == 62:
+                return self.king_wont_be_attacked(ss=s1s_valid) & \
+                       self.king_wont_be_attacked(ss=s1s_valid - [[0, -self.player], [0, self.player]])
+            else:
+                return self.mask_unpinned_absolute_vectorized(s0s=s0s_valid, s1s=s1s_valid)
+
         s0s = self.squares_of_piece(p=piece_type)
-        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[piece_type]
+        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[piece_type] * self.player
         mask_inboard = self.squares_are_inside_board(ss=s1s)
         s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
         s1s_valid = s1s[mask_inboard]
-        unpin_mask = self.mask_unpinned_absolute_vectorized(s0s=s0s_valid, s1s=s1s_valid)
-        s0s_valid = s0s_valid[unpin_mask]
-        s1s_valid = s1s_valid[unpin_mask]
-        mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
-        s0s_valid = s0s_valid[mask_vacant]
-        s1s_valid = s1s_valid[mask_vacant]
-        if piece_type != 2 and s1s_valid.size != 0:
+        update_view(mask_can_move_into())
+        update_view(check_mask())
+
+        if piece_type in [3, 4, 5] and s1s_valid.size != 0:
             ds_valid = s1s_valid - s0s_valid
             # s0s_rep = np.tile(s0s, reps=4).reshape(-1, 2)
             # ds_rep = np.concatenate([self.UNIT_VECTORS_ORTHO for i in range(s0s.size // 2)])
@@ -264,9 +296,9 @@ class ArrayJudge(Judge):
             if not valid_moves:
                 return []
             np.concatenate(valid_moves, dtype=np.int8)
-            s1s_valid = s1s_valid[mask_valid_moves] + valid_moves
-            s0s_valid = s0s_valid[mask_valid_moves]
-        is_promotion = np.zeros(shape=s1s_valid.size // 2, dtype=np.bool_)
+            update_view(mask_valid_moves)
+            s1s_valid = s0s_valid + valid_moves
+        is_promotion = np.zeros(shape=s0s_valid.size // 2, dtype=np.bool_)
         return self.generate_move_objects_vectorized(
             s0s=s0s_valid, s1s=s1s_valid, is_promotion=is_promotion
         )
