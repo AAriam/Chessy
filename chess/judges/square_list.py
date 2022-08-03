@@ -1,9 +1,39 @@
-from typing import Optional, Sequence, NamedTuple, Any, NoReturn, Union
+from typing import Optional, Sequence, NamedTuple, Any, NoReturn, Union, Tuple
 
 import numpy as np
 
 from .abc import Judge, IllegalMoveError, GameOverError
 from ..board_representation import BoardState, Move, COLOR, PIECE
+
+
+def move_vectors_orthogonal():
+    moves = np.zeros((28, 2), dtype=np.int8)
+    mag = np.arange(1, 8)
+    moves[:7, 0] = mag
+    moves[7:14, 0] = -mag
+    moves[14:21, 1] = mag
+    moves[21:, 1] = -mag
+    return moves
+
+
+def move_vectors_diagonal():
+    moves = np.zeros((28, 2), dtype=np.int8)
+    mag = np.repeat(np.arange(1, 8), 2).reshape(-1, 2)
+    moves[:7] = mag
+    moves[7:14] = -mag
+    moves[14:21] = mag * [1, -1]
+    moves[21:] = mag * [-1, 1]
+    return moves
+
+
+def move_vectors_cardinal():
+    return np.concatenate([move_vectors_orthogonal(), move_vectors_diagonal()])
+
+
+def move_vectors_cardinal_unit():
+    return np.array(
+        [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
+    )
 
 
 class ArrayJudge(Judge):
@@ -20,9 +50,10 @@ class ArrayJudge(Judge):
     """
 
     # Directions: top, bottom, right, left, top-right, top-left, bottom-right, bottom-left
-    DIRECTION_UNIT_VECTORS = np.array(
-        [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
-    )
+    DIRECTION_UNIT_VECTORS = move_vectors_cardinal_unit()
+
+    UNIT_VECTORS_ORTHO = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]], dtype=np.int8)
+    UNIT_VECTORS_DIAG = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]], dtype=np.int8)
 
     # All possible move vectors for a piece
     MOVE_VECTORS = {
@@ -35,8 +66,15 @@ class ArrayJudge(Judge):
         5: np.array(
             [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
         ),
-        6: np.array(
-            [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
+        6: move_vectors_cardinal_unit(),
+    }
+
+    MOVE_VECTORS_PIECE = {
+        11: np.array([[1, 0]], dtype=np.int8),  # Pawn vertical advance
+        12: np.array([[2, 0]], dtype=np.int8),  # Pawm double vertical advance
+        13: np.array([[1, 1], [1, -1]], dtype=np.int8),  # Pawn attacks
+        2: np.array(  # Knight moves
+            [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
         ),
     }
 
@@ -166,9 +204,12 @@ class ArrayJudge(Judge):
                 if not valid_moves:
                     self.is_checkmate = True
             else:
-                valid_moves = []
-                for square in self.squares_of_player:
-                    valid_moves.extend(self.generate_moves_for_square(square))
+                valid_moves = self.generate_pawn_moves()
+                valid_moves.extend(self.generate_king_moves())
+                for p in range(2, 6):
+                    valid_moves.extend(self.generate_QRBN_moves(piece_type=p))
+                # for square in self.squares_of_player:
+                #     valid_moves.extend(self.generate_moves_for_square(square))
                 if not valid_moves:
                     self.is_draw = True
             self.valid_moves = valid_moves
@@ -394,10 +435,8 @@ class ArrayJudge(Judge):
         return neighbor_squares
 
     def generate_pawn_moves(self):
-        s0s = self.squares_of_piece(p=1)[:, np.newaxis]
-        s1s = s0s + self.MOVE_VECTORS[1]
 
-
+        s1s_capture = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[1][2:]
 
     def pawn_move_restriction(self, s0):
         move_dirs = self.MOVE_VECTORS[1] * self.player
@@ -587,14 +626,15 @@ class ArrayJudge(Judge):
             unpinned_mask = self.mask_absolute_pin(
                 s=attacking_squares[0], ds=attacking_squares[0] - attacking_positions
             )
-            unpinned_mask = self.mask_absolute_pin(s0=attacking_squares[0], ds=attacking_squares[0] - attacking_positions)
             available_capturing_positions = attacking_positions[unpinned_mask]
             for capturing_position in available_capturing_positions:
-                resolving_moves.append(Move(start_square=capturing_position, end_square=attacking_squares[0]))
-
-
-
-
+                resolving_moves.append(
+                    Move(start_square=capturing_position, end_square=attacking_squares[0])
+                )
+            # Find blocking moves
+            squares_in_between = self.squares_in_between(s0=attacking_squares[0], s1=king_pos)
+            for square in squares_in_between:
+                attacking_positions = self.squares_attacking(s=square, p=self.player)
 
         return resolving_moves
 
