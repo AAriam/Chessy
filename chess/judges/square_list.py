@@ -1,39 +1,14 @@
+"""
+Array-based judge and move-generator.
+"""
+
+# Standard library
 from typing import Optional, Sequence, NamedTuple, Any, NoReturn, Union, Tuple
-
+# 3rd party
 import numpy as np
-
+# Self
 from .abc import Judge, IllegalMoveError, GameOverError
 from ..board_representation import BoardState, Move, COLOR, PIECE
-
-
-def move_vectors_orthogonal():
-    moves = np.zeros((28, 2), dtype=np.int8)
-    mag = np.arange(1, 8)
-    moves[:7, 0] = mag
-    moves[7:14, 0] = -mag
-    moves[14:21, 1] = mag
-    moves[21:, 1] = -mag
-    return moves
-
-
-def move_vectors_diagonal():
-    moves = np.zeros((28, 2), dtype=np.int8)
-    mag = np.repeat(np.arange(1, 8), 2).reshape(-1, 2)
-    moves[:7] = mag
-    moves[7:14] = -mag
-    moves[14:21] = mag * [1, -1]
-    moves[21:] = mag * [-1, 1]
-    return moves
-
-
-def move_vectors_cardinal():
-    return np.concatenate([move_vectors_orthogonal(), move_vectors_diagonal()])
-
-
-def move_vectors_cardinal_unit():
-    return np.array(
-        [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
-    )
 
 
 class ArrayJudge(Judge):
@@ -50,7 +25,9 @@ class ArrayJudge(Judge):
     """
 
     # Directions: top, bottom, right, left, top-right, top-left, bottom-right, bottom-left
-    DIRECTION_UNIT_VECTORS = move_vectors_cardinal_unit()
+    DIRECTION_UNIT_VECTORS = np.array(
+        [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
+    )
 
     UNIT_VECTORS_ORTHO = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]], dtype=np.int8)
     UNIT_VECTORS_DIAG = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]], dtype=np.int8)
@@ -66,7 +43,9 @@ class ArrayJudge(Judge):
         5: np.array(
             [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
         ),
-        6: move_vectors_cardinal_unit(),
+        6: np.array(
+            [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
+        ),
     }
 
     MOVE_VECTORS_PIECE = {
