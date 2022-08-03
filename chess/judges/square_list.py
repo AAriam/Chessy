@@ -228,13 +228,73 @@ class ArrayJudge(Judge):
 
         return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
 
-    def generate_knight_moves(self):
-        s0s = self.squares_of_piece(p=2)
-        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS[2]
-        inboard_mask = self.squares_are_inside_board(ss=s1s)
-        s0s_valid = np.repeat(s0s, np.count_nonzero(inboard_mask, axis=1), axis=0)
-        s1s_valid = s1s[inboard_mask]
-        unpin_mask = self.mask_unpinned_absolute_vectorized(s0s=s0s, s1s=s1s)
+    def generate_QRBN_moves(self, piece_type: int):
+        s0s = self.squares_of_piece(p=piece_type)
+        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[piece_type]
+        mask_inboard = self.squares_are_inside_board(ss=s1s)
+        s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
+        s1s_valid = s1s[mask_inboard]
+        unpin_mask = self.mask_unpinned_absolute_vectorized(s0s=s0s_valid, s1s=s1s_valid)
+        s0s_valid = s0s_valid[unpin_mask]
+        s1s_valid = s1s_valid[unpin_mask]
+        mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
+        s0s_valid = s0s_valid[mask_vacant]
+        s1s_valid = s1s_valid[mask_vacant]
+        if piece_type != 2 and s1s_valid.size != 0:
+            ds_valid = s1s_valid - s0s_valid
+            # s0s_rep = np.tile(s0s, reps=4).reshape(-1, 2)
+            # ds_rep = np.concatenate([self.UNIT_VECTORS_ORTHO for i in range(s0s.size // 2)])
+            neighbors_pos = self.neighbor_squares_vectorized(
+                ss=s0s_valid,
+                ds=ds_valid
+                # np.tile(self.UNIT_VECTORS_ORTHO, reps=s0s.size // 2).reshape(-1, 2)
+            )
+            neighbor_pieces = self.piece_in_squares(neighbors_pos)
+            shift_for_own_piece = self.pieces_belong_to_player(ps=neighbor_pieces)
+            move_mag_restricted = (
+                np.abs(neighbors_pos - s0s_valid).max(axis=-1) - shift_for_own_piece
+            )
+            mask_valid_moves = move_mag_restricted > 0
+            valid_move_mags = move_mag_restricted[mask_valid_moves]
+            valid_move_dirs = ds_valid[mask_valid_moves]
+            valid_moves = [
+                d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)
+                for mag, d in zip(valid_move_mags, valid_move_dirs)
+            ]
+            if not valid_moves:
+                return []
+            np.concatenate(valid_moves, dtype=np.int8)
+            s1s_valid = s1s_valid[mask_valid_moves] + valid_moves
+            s0s_valid = s0s_valid[mask_valid_moves]
+        is_promotion = np.zeros(shape=s1s_valid.size // 2, dtype=np.bool_)
+        return self.generate_move_objects_vectorized(
+            s0s=s0s_valid, s1s=s1s_valid, is_promotion=is_promotion
+        )
+
+        # s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[4]
+        # mask_inboard = self.squares_are_inside_board(ss=s1s)
+        # s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
+        # s1s_valid = s1s[mask_inboard]
+        #
+        # mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
+        # s0s_valid = s0s_valid[mask_vacant]
+        # s1s_valid = s1s_valid[mask_vacant]
+        # unpin_mask = self.mask_unpinned_absolute_vectorized(s0s=s0s_valid, s1s=s1s_valid)
+        # s0s_valid = s0s_valid[unpin_mask]
+        # s1s_valid = s1s_valid[unpin_mask]
+        # is_promotion = np.zeros(shape=s1s_valid.size // 2, dtype=np.bool_)
+        # return self.generate_move_objects_vectorized(
+        #     s0s=s0s_valid, s1s=s1s_valid, is_promotion=is_promotion
+        # )
+
+    def generate_move_objects_vectorized(self, s0s, s1s, is_promotion):
+        moves = []
+        for s0, s1, p in zip(s0s, s1s, is_promotion):
+            moves.extend(
+                Move(s0, s1, piece)
+                for piece in (np.array([2, 3, 4, 5], dtype=np.int8) if p else [None])
+            )
+        return moves
 
     def mask_unpinned_absolute_vectorized(self, s0s, s1s):
         current_unpin_mask = np.zeros(s0s.size // 2, dtype=np.bool_)
