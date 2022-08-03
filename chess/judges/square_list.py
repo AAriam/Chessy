@@ -85,26 +85,17 @@ class ArrayJudge(Judge):
         )
 
     def submit_move(self, move: Move) -> NoReturn:
+        move_vect = move.end_square - move.start_square
+        piece = self.piece_in_squares(ss=move.start_square)
+        piece_name = PIECE[self.piece_types(piece)].name
         if self.is_checkmate:
             raise GameOverError("Game over. Current player is checkmated.")
         if self.is_draw:
             raise GameOverError("Game over. It is a draw.")
-        self.raise_for_preliminaries(move=move)
-        if move not in self.valid_moves:
-            if self.is_check:
-                raise IllegalMoveError("Move does not resolve check.")
-            raise IllegalMoveError("Submitted move is illegal.")
-        self.apply_move(move=move)
-        return
-
-    def raise_for_preliminaries(self, move: Move) -> NoReturn:
-        move_vect = move.end_square - move.start_square
-        piece = self.piece_in_squares(ss=move.start_square)
         if not self.squares_are_inside_board(ss=move.start_square):
             raise IllegalMoveError("Start-square is out of board.")
         if not piece:
             raise IllegalMoveError("Start-square is empty.")
-        piece_name = PIECE[self.piece_types(piece)].name
         if not self.squares_belong_to_player(ss=move.start_square):
             raise IllegalMoveError(f"It is {COLOR[self.player].name}'s turn.")
         if not self.squares_are_inside_board(ss=move.end_square):
@@ -115,6 +106,11 @@ class ArrayJudge(Judge):
             raise IllegalMoveError(
                 f"{piece_name.capitalize()}s cannot move in direction {move_vect}."
             )
+        if move not in self.valid_moves:
+            if self.is_check:
+                raise IllegalMoveError("Move does not resolve check.")
+            raise IllegalMoveError("Submitted move is illegal.")
+        self.apply_move(move=move)
         return
 
     def apply_move(self, move: Move) -> None:
