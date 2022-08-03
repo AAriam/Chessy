@@ -232,6 +232,69 @@ class ArrayJudge(Judge):
 
         return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
 
+    def generate_knight_moves(self):
+        s0s = self.squares_of_piece(p=2)
+        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS[2]
+        inboard_mask = self.squares_are_inside_board(ss=s1s)
+        s0s_valid = np.repeat(s0s, np.count_nonzero(inboard_mask, axis=1), axis=0)
+        s1s_valid = s1s[inboard_mask]
+        unpin_mask = self.mask_unpinned_absolute_vectorized(s0s=s0s, s1s=s1s)
+
+    def mask_unpinned_absolute_vectorized(self, s0s, s1s):
+        s0ks_v, s0ks_uv, s0ks_vm, s0ks_cardinal_mask = ArrayJudge.move_dir_mag(s0s=s0s, s1s=self.position_king)
+        s01s_v, s01s_uv, s01s_vm, s01s_cardinal_mask = ArrayJudge.move_dir_mag(s0s=s0s, s1s=s1s)
+        move_towards_king = s01s_uv[s0ks_cardinal_mask] == s0ks_uv[s0ks_cardinal_mask]
+        move_opposite_king = s01s_uv[s0ks_cardinal_mask] == -s0ks_uv[s0ks_cardinal_mask]
+        mask_move_along_s0k = (move_towards_king[..., 0] & move_towards_king[..., 1]) | (move_opposite_king[..., 0] & move_opposite_king[..., 1])
+        kingside_neighbors_squares = self.neighbor_squares_vectorized(
+                ss=s0s[s0ks_cardinal_mask][~mask_move_along_s0k],
+                ds=s0ks_v[s0ks_cardinal_mask][~mask_move_along_s0k]
+            )
+        kingside_neighbors = self.piece_in_squares(ss=kingside_neighbors_squares)
+        mask_king_protected = kingside_neighbors != self.king
+        otherside_neighbors_squares = self.neighbor_squares_vectorized(
+            ss=s0s[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected],
+            ds=-s0ks_v[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected],
+        )
+        otherside_neighbors = self.piece_in_squares(ss=otherside_neighbors_squares)
+        no_queen = otherside_neighbors != -self.player * 5
+        has_orthogonal_dir = s0ks_uv[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected] == 0
+        is_orthogonal = has_orthogonal_dir[..., 0] | has_orthogonal_dir[..., 1]
+        no_rooks = otherside_neighbors[is_orthogonal] != -self.player * 4
+        no_bishops = otherside_neighbors[~is_orthogonal] != -self.player * 3
+        mask_no_pinning = no_queen
+        mask_no_pinning[is_orthogonal] &= no_rooks
+        mask_no_pinning[~is_orthogonal] &= no_bishops
+
+        unpinned_mask = ~s0ks_cardinal_mask
+        unpinned_mask[s0ks_cardinal_mask] |= mask_move_along_s0k
+        unpinned_mask[s0ks_cardinal_mask][~mask_move_along_s0k] |= mask_king_protected
+        unpinned_mask[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected] |= mask_no_pinning
+        return unpinned_mask
+
+    def neighbor_squares_vectorized(self, ss, ds):
+        # dists = np.where(ds == 1, 7 - ss, ss)
+        # dists[ds == 0] = 8
+        # ds_nearest_edge = dists.min(axis=-1)
+        neighbor_squares = np.empty(shape=ss.shape, dtype=np.int8)
+        next_neighbors_pos = ss + ds
+        mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
+        while np.any(mask_inboard):
+            mask_inboard &= self.squares_are_inside_board(ss=next_neighbors_pos)
+            neighbor_squares[~mask_inboard] = (next_neighbors_pos - ds)[~mask_inboard]
+            inboard_squares = next_neighbors_pos[mask_inboard]
+            square_type = self.board[inboard_squares[..., 0], inboard_squares[..., 1]]
+            mask_not_empty = square_type != 0
+            neighbor_squares[mask_inboard][mask_not_empty] = inboard_squares[mask_not_empty]
+            next_neighbors_pos += ds
+        return neighbor_squares
+
+    def generate_pawn_moves(self):
+        s0s = self.squares_of_piece(p=1)[:, np.newaxis]
+        s1s = s0s + self.MOVE_VECTORS[1]
+
+
+
     def pawn_move_restriction(self, s0):
         move_dirs = self.MOVE_VECTORS[1] * self.player
         return np.ndarray(
