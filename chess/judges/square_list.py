@@ -793,7 +793,7 @@ class ArrayJudge(Judge):
         # if ss.ndim == 1:
         #     ss = np.expand_dims(ss, axis=0)
         # return np.all(np.all([ss < 8, ss > -1], axis=0), axis=1)
-        rank_file_inside_board = ss > -1 & ss < 8
+        rank_file_inside_board = (ss > -1) & (ss < 8)
         return rank_file_inside_board[..., 0] & rank_file_inside_board[..., 1]
 
     @staticmethod
