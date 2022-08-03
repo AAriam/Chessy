@@ -172,7 +172,6 @@ class ArrayJudge(Judge):
                 if not valid_moves:
                     self.is_draw = True
             self.valid_moves = valid_moves
-
         return
 
     @property
@@ -200,14 +199,16 @@ class ArrayJudge(Judge):
             shift[0] = shift[0] | self.pieces_belong_to_opponent(neighbor_pieces[0])
             move_mag_restricted = np.minimum(
                 np.abs(neighbor_positions - s0).max(axis=1) - shift,
-                self.pawn_move_restriction(s0=s0)[unpinned_mask]
+                self.pawn_move_restriction(s0=s0)[unpinned_mask],
             )
         elif piece_type == 6:
-            shift[[2, -2]] = shift[[2, -2]] | self.pieces_belong_to_opponent(neighbor_pieces[[2, -2]])
+            shift[[2, -2]] = shift[[2, -2]] | self.pieces_belong_to_opponent(
+                neighbor_pieces[[2, -2]]
+            )
 
             move_mag_restricted = np.minimum(
                 np.abs(neighbor_positions - s0).max(axis=1) - shift,
-                self.king_move_restriction[unpinned_mask]
+                self.king_move_restriction[unpinned_mask],
             )
         else:
             move_mag_restricted = np.abs(neighbor_positions - s0).max(axis=1) - shift
@@ -229,7 +230,6 @@ class ArrayJudge(Judge):
         return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
 
     def generate_QRBN_moves(self, piece_type: int):
-
         def update_view(mask):
             nonlocal s0s_valid, s1s_valid
             s0s_valid = s0s_valid[mask]
@@ -238,29 +238,38 @@ class ArrayJudge(Judge):
         def mask_can_move_into():
             if piece_type == 13:
                 # For pawn captures
-                return self.squares_belong_to_opponent(ss=s1s_valid) | \
-                       self.is_enpassant_square(ss=s1s_valid)
+                return self.squares_belong_to_opponent(ss=s1s_valid) | self.is_enpassant_square(
+                    ss=s1s_valid
+                )
             elif piece_type == 12:
-                return s0s_valid[..., 0] == (1 if self.player == 1 else 6) & \
-                       ~self.squares_belong_to_player(ss=s0s_valid + [1, 0]) & \
-                       ~self.squares_belong_to_player(ss=s1s_valid)
+                return s0s_valid[..., 0] == (
+                    1 if self.player == 1 else 6
+                ) & ~self.squares_belong_to_player(
+                    ss=s0s_valid + [1, 0]
+                ) & ~self.squares_belong_to_player(
+                    ss=s1s_valid
+                )
             elif piece_type == 62:
                 b_file_empty = np.array([True, True], dtype=np.bool_)
-                b_file_empty[0 if self.player == 1 else 1] = self.squares_are_empty(ss=s1s_valid[0 if self.player == 1 else 1] - [0, 1])
+                b_file_empty[0 if self.player == 1 else 1] = self.squares_are_empty(
+                    ss=s1s_valid[0 if self.player == 1 else 1] - [0, 1]
+                )
                 return (
-                        self.castling_rights[self.player, [-self.player, self.player]] &
-                        self.squares_are_empty(ss=s1s_valid) &
-                        self.squares_are_empty(ss=s1s_valid - [[0, -self.player], [0, self.player]]) &
-                        b_file_empty
+                    self.castling_rights[self.player, [-self.player, self.player]]
+                    & self.squares_are_empty(ss=s1s_valid)
+                    & self.squares_are_empty(ss=s1s_valid - [[0, -self.player], [0, self.player]])
+                    & b_file_empty
                 )
             else:
                 return ~self.squares_belong_to_player(ss=s1s_valid)
+
         def check_mask():
             if piece_type == 61:
                 return self.king_wont_be_attacked(ss=s1s_valid)
             elif piece_type == 62:
-                return self.king_wont_be_attacked(ss=s1s_valid) & \
-                       self.king_wont_be_attacked(ss=s1s_valid - [[0, -self.player], [0, self.player]])
+                return self.king_wont_be_attacked(ss=s1s_valid) & self.king_wont_be_attacked(
+                    ss=s1s_valid - [[0, -self.player], [0, self.player]]
+                )
             else:
                 return self.mask_unpinned_absolute_vectorized(s0s=s0s_valid, s1s=s1s_valid)
 
@@ -356,9 +365,7 @@ class ArrayJudge(Judge):
         )
         otherside_neighbors = self.piece_in_squares(ss=otherside_neighbors_squares)
         no_queen = otherside_neighbors != -self.player * 5
-        has_orthogonal_dir = (
-            s0ks_uv[~current_unpin_mask] == 0
-        )
+        has_orthogonal_dir = s0ks_uv[~current_unpin_mask] == 0
         is_orthogonal = has_orthogonal_dir[..., 0] | has_orthogonal_dir[..., 1]
         no_rooks = otherside_neighbors[is_orthogonal] != -self.player * 4
         no_bishops = otherside_neighbors[~is_orthogonal] != -self.player * 3
@@ -397,10 +404,10 @@ class ArrayJudge(Judge):
         return np.array(
             [
                 1 + self.pawn_not_yet_moved(s0),
-                self.pawn_can_capture_square(s0+move_dirs[1]),
-                self.pawn_can_capture_square(s0+move_dirs[2])
+                self.pawn_can_capture_square(s0 + move_dirs[1]),
+                self.pawn_can_capture_square(s0 + move_dirs[2]),
             ],
-            dtype=np.int8
+            dtype=np.int8,
         )
 
     def pawn_not_yet_moved(self, s0):
@@ -411,7 +418,9 @@ class ArrayJudge(Judge):
 
     def pawn_can_capture_square(self, s1):
         can_capture_enpassant = np.all(s1 == [(5 if self.player == 1 else 2), self.enpassant_file])
-        can_capture_normal = self.squares_are_inside_board(ss=s1) and self.squares_belong_to_opponent(ss=s1)
+        can_capture_normal = self.squares_are_inside_board(
+            ss=s1
+        ) and self.squares_belong_to_opponent(ss=s1)
         return can_capture_normal or can_capture_enpassant
 
     @property
@@ -428,9 +437,11 @@ class ArrayJudge(Judge):
         moves = []
         for s1 in s1s:
             moves.extend(
-                Move(s0, s1, promoted) for promoted in (
+                Move(s0, s1, promoted)
+                for promoted in (
                     np.array([2, 3, 4, 5], dtype=np.int8)
-                    if is_pawn and s1[0] == (7 if self.player == 1 else 0) else [None]
+                    if is_pawn and s1[0] == (7 if self.player == 1 else 0)
+                    else [None]
                 )
             )
         return moves
@@ -595,7 +606,7 @@ class ArrayJudge(Judge):
 
     def neighbor_square(self, s: np.ndarray, d: np.ndarray) -> np.ndarray:
         """
-        Coordinates of the nearest neighbor to a given square, in a given direction.
+        Coordinates of the nearest neighbor to a given square, in a given cardinal direction.
 
         Parameters
         ----------
@@ -690,7 +701,7 @@ class ArrayJudge(Judge):
         """
         move_vect = s1s - s0s
         move_vect_multiplier = np.gcd(move_vect[..., 0], move_vect[..., 1])
-        move_unit_vect = (move_vect // np.array(move_vect_multiplier)[..., np.newaxis])
+        move_unit_vect = move_vect // np.array(move_vect_multiplier)[..., np.newaxis]
         is_cardinal = np.abs(move_unit_vect).max(axis=-1) == 1
         return move_vect, move_unit_vect, move_vect_multiplier, is_cardinal
 
