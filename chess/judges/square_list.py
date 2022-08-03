@@ -394,7 +394,7 @@ class ArrayJudge(Judge):
 
     def pawn_move_restriction(self, s0):
         move_dirs = self.MOVE_VECTORS[1] * self.player
-        return np.ndarray(
+        return np.array(
             [
                 1 + self.pawn_not_yet_moved(s0),
                 self.pawn_can_capture_square(s0+move_dirs[1]),
