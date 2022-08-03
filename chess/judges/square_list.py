@@ -586,7 +586,7 @@ class ArrayJudge(Judge):
         """
         move_vect = s1s - s0s
         move_vect_multiplier = np.gcd(move_vect[..., 0], move_vect[..., 1])
-        move_unit_vect = move_vect // move_vect_multiplier[:, np.newaxis]
+        move_unit_vect = (move_vect // np.array(move_vect_multiplier)[..., np.newaxis])
         is_cardinal = np.abs(move_unit_vect).max(axis=-1) == 1
         return move_vect, move_unit_vect, move_vect_multiplier, is_cardinal
 
