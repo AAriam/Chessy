@@ -56,7 +56,6 @@ class ArrayJudge(Judge):
         self.enpassant_file: np.int8 = enpassant_file
         self.ply_count: np.int16 = ply_count
 
-        self.state_not_yet_analyzed: bool = True
         self.is_checkmate: bool = False
         self.is_check: bool = False
         self.is_draw: bool = False
@@ -86,8 +85,6 @@ class ArrayJudge(Judge):
         )
 
     def submit_move(self, move: Move) -> NoReturn:
-        if self.state_not_yet_analyzed:
-            self.generate_all_valid_moves()
         if self.is_checkmate:
             raise GameOverError("Game over. Current player is checkmated.")
         if self.is_draw:
@@ -155,12 +152,10 @@ class ArrayJudge(Judge):
         self.board[tuple(move.start_square)] = 0
         self.fifty_move_count += 1
         self.player *= -1
-        self.state_not_yet_analyzed = True
+        self.analyze_state()
         return
 
     def generate_all_valid_moves(self) -> list[Move]:
-        if self.state_not_yet_analyzed:
-            self.analyze_state()
         return self.valid_moves
 
     def analyze_state(self):
@@ -181,8 +176,12 @@ class ArrayJudge(Judge):
                 if not valid_moves:
                     self.is_draw = True
             self.valid_moves = valid_moves
-        self.state_not_yet_analyzed = False
-        return valid_moves
+
+        return
+
+    @property
+    def is_dead_position(self):
+        return
 
     def generate_moves_for_square(self, s0: np.ndarray) -> list[Move]:
         piece_type = self.piece_types(ps=self.piece_in_squares(ss=s0))
