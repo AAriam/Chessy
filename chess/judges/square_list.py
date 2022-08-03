@@ -426,16 +426,21 @@ class ArrayJudge(Judge):
         # dists = np.where(ds == 1, 7 - ss, ss)
         # dists[ds == 0] = 8
         # ds_nearest_edge = dists.min(axis=-1)
-        neighbor_squares = np.empty(shape=ss.shape, dtype=np.int8)
+        neighbor_squares = np.zeros(shape=ss.shape, dtype=np.int8)
         next_neighbors_pos = ss + ds
-        mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
-        while np.any(mask_inboard):
-            mask_inboard &= self.squares_are_inside_board(ss=next_neighbors_pos)
+        # mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
+        not_set = np.ones(ss.size // 2, dtype=np.int8)
+        while np.any(not_set):
+            mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
             neighbor_squares[~mask_inboard] = (next_neighbors_pos - ds)[~mask_inboard]
+            not_set[~mask_inboard] = 0
             inboard_squares = next_neighbors_pos[mask_inboard]
             square_type = self.board[inboard_squares[..., 0], inboard_squares[..., 1]]
             mask_not_empty = square_type != 0
-            neighbor_squares[mask_inboard][mask_not_empty] = inboard_squares[mask_not_empty]
+            x = mask_inboard.copy()
+            x[x] &= mask_not_empty
+            neighbor_squares[x] = inboard_squares[mask_not_empty]
+            not_set[x] = 0
             next_neighbors_pos += ds
         return neighbor_squares
 
