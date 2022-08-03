@@ -76,6 +76,11 @@ class ArrayJudge(Judge):
         2: np.array(  # Knight moves
             [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
         ),
+        3: UNIT_VECTORS_DIAG,
+        4: UNIT_VECTORS_ORTHO,
+        5: np.concatenate([UNIT_VECTORS_ORTHO, UNIT_VECTORS_DIAG]),
+        61: DIRECTION_UNIT_VECTORS,  # King normal moves
+        62: np.array([[0, -2], [0, 2]], dtype=np.int8),  # King castling moves
     }
 
     def __init__(
