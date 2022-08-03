@@ -194,9 +194,6 @@ class ArrayJudge(Judge):
         self.analyze_state()
         return
 
-    def generate_all_valid_moves(self) -> list[Move]:
-        return self.valid_moves
-
     def analyze_state(self):
         if self.fifty_move_count == 100 or self.is_dead_position:
             self.is_draw = True
@@ -220,60 +217,8 @@ class ArrayJudge(Judge):
             self.valid_moves = valid_moves
         return
 
-    @property
-    def is_dead_position(self):
-        return
-
-    def generate_moves_for_square(self, s0: np.ndarray) -> list[Move]:
-        piece_type = self.piece_types(ps=self.piece_in_squares(ss=s0))
-        if piece_type == 0:
-            return []
-
-        move_dirs = self.MOVE_VECTORS[piece_type] * self.player
-        unpinned_mask = self.mask_absolute_pin(s=s0, ds=move_dirs)
-        move_dirs_unpinned = move_dirs[unpinned_mask]
-        if piece_type == 2:
-            end_squares = s0 + move_dirs_unpinned
-            inboards = end_squares[self.squares_are_inside_board(end_squares)]
-            vacants = inboards[np.bitwise_not(self.squares_belong_to_player(inboards))]
-            return self.generate_move_objects(s0=s0, s1s=vacants)
-
-        neighbor_positions = self.neighbor_squares(s=s0, ds=move_dirs_unpinned)
-        neighbor_pieces = self.piece_in_squares(neighbor_positions)
-        shift = self.pieces_belong_to_player(ps=neighbor_pieces)
-        if piece_type == 1:
-            shift[0] = shift[0] | self.pieces_belong_to_opponent(neighbor_pieces[0])
-            move_mag_restricted = np.minimum(
-                np.abs(neighbor_positions - s0).max(axis=1) - shift,
-                self.pawn_move_restriction(s0=s0)[unpinned_mask],
-            )
-        elif piece_type == 6:
-            shift[[2, -2]] = shift[[2, -2]] | self.pieces_belong_to_opponent(
-                neighbor_pieces[[2, -2]]
-            )
-
-            move_mag_restricted = np.minimum(
-                np.abs(neighbor_positions - s0).max(axis=1) - shift,
-                self.king_move_restriction[unpinned_mask],
-            )
-        else:
-            move_mag_restricted = np.abs(neighbor_positions - s0).max(axis=1) - shift
-        valid_move_mask = move_mag_restricted > 0
-        valid_move_mags = move_mag_restricted[valid_move_mask]
-        valid_move_dirs = move_dirs_unpinned[valid_move_mask]
-        valid_moves = [
-            d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)
-            for mag, d in zip(valid_move_mags, valid_move_dirs)
-        ]
-        if not valid_moves:
-            return []
-
-        valid_moves = np.concatenate(valid_moves, dtype=np.int8)
-        valid_s1s = (s0 + valid_moves).reshape((-1, 2))
-        if piece_type == 6:
-            valid_s1s = valid_s1s[self.king_wont_be_attacked(ss=valid_s1s)]
-
-        return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
+    def generate_all_valid_moves(self) -> list[Move]:
+        return self.valid_moves
 
     def generate_QRBN_moves(self, piece_type: int):
         def update_view(mask):
@@ -374,14 +319,87 @@ class ArrayJudge(Judge):
         #     s0s=s0s_valid, s1s=s1s_valid, is_promotion=is_promotion
         # )
 
-    def generate_move_objects_vectorized(self, s0s, s1s, is_promotion):
-        moves = []
-        for s0, s1, p in zip(s0s, s1s, is_promotion):
-            moves.extend(
-                Move(s0, s1, piece)
-                for piece in (np.array([2, 3, 4, 5], dtype=np.int8) if p else [None])
+    def generate_moves_for_square(self, s0: np.ndarray) -> list[Move]:
+        piece_type = self.piece_types(ps=self.piece_in_squares(ss=s0))
+        if piece_type == 0:
+            return []
+
+        move_dirs = self.MOVE_VECTORS[piece_type] * self.player
+        unpinned_mask = self.mask_absolute_pin(s=s0, ds=move_dirs)
+        move_dirs_unpinned = move_dirs[unpinned_mask]
+        if piece_type == 2:
+            end_squares = s0 + move_dirs_unpinned
+            inboards = end_squares[self.squares_are_inside_board(end_squares)]
+            vacants = inboards[np.bitwise_not(self.squares_belong_to_player(inboards))]
+            return self.generate_move_objects(s0=s0, s1s=vacants)
+
+        neighbor_positions = self.neighbor_squares(s=s0, ds=move_dirs_unpinned)
+        neighbor_pieces = self.piece_in_squares(neighbor_positions)
+        shift = self.pieces_belong_to_player(ps=neighbor_pieces)
+        if piece_type == 1:
+            shift[0] = shift[0] | self.pieces_belong_to_opponent(neighbor_pieces[0])
+            move_mag_restricted = np.minimum(
+                np.abs(neighbor_positions - s0).max(axis=1) - shift,
+                self.pawn_move_restriction(s0=s0)[unpinned_mask],
             )
-        return moves
+        elif piece_type == 6:
+            shift[[2, -2]] = shift[[2, -2]] | self.pieces_belong_to_opponent(
+                neighbor_pieces[[2, -2]]
+            )
+
+            move_mag_restricted = np.minimum(
+                np.abs(neighbor_positions - s0).max(axis=1) - shift,
+                self.king_move_restriction[unpinned_mask],
+            )
+        else:
+            move_mag_restricted = np.abs(neighbor_positions - s0).max(axis=1) - shift
+        valid_move_mask = move_mag_restricted > 0
+        valid_move_mags = move_mag_restricted[valid_move_mask]
+        valid_move_dirs = move_dirs_unpinned[valid_move_mask]
+        valid_moves = [
+            d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)
+            for mag, d in zip(valid_move_mags, valid_move_dirs)
+        ]
+        if not valid_moves:
+            return []
+
+        valid_moves = np.concatenate(valid_moves, dtype=np.int8)
+        valid_s1s = (s0 + valid_moves).reshape((-1, 2))
+        if piece_type == 6:
+            valid_s1s = valid_s1s[self.king_wont_be_attacked(ss=valid_s1s)]
+
+        return self.generate_move_objects(s0=s0, s1s=valid_s1s, is_pawn=piece_type == 1)
+
+    def moves_resolving_check(self, attacking_squares: np.ndarray):
+        # Get the squares the king can move into to resolve check.
+        king_pos = self.pos_king
+        possible_squares = king_pos + self.DIRECTION_UNIT_VECTORS
+        inboard_squares = possible_squares[self.squares_are_inside_board(ss=possible_squares)]
+        vacant_squares = inboard_squares[
+            np.bitwise_not(self.squares_belong_to_player(inboard_squares))
+        ]
+        safe_squares = vacant_squares[self.king_wont_be_attacked(ss=vacant_squares)]
+        resolving_moves = [
+            Move(start_square=king_pos, end_square=safe_square) for safe_square in safe_squares
+        ]
+        # In case of single checks, get the moves that block or capture the attacking piece.
+        if attacking_squares.shape[0] == 1:
+            # Find capturing moves
+            attacking_positions = self.squares_attacking(s=attacking_squares[0], p=self.player)
+            unpinned_mask = self.mask_absolute_pin(
+                s=attacking_squares[0], ds=attacking_squares[0] - attacking_positions
+            )
+            available_capturing_positions = attacking_positions[unpinned_mask]
+            for capturing_position in available_capturing_positions:
+                resolving_moves.append(
+                    Move(start_square=capturing_position, end_square=attacking_squares[0])
+                )
+            # Find blocking moves
+            squares_in_between = self.squares_in_between(s0=attacking_squares[0], s1=king_pos)
+            for square in squares_in_between:
+                attacking_positions = self.squares_attacking(s=square, p=self.player)
+
+        return resolving_moves
 
     def mask_unpinned_absolute_vectorized(self, s0s, s1s):
         current_unpin_mask = np.zeros(s0s.size // 2, dtype=np.bool_)
@@ -422,79 +440,6 @@ class ArrayJudge(Judge):
 
         return current_unpin_mask
 
-    def neighbor_squares_vectorized(self, ss, ds):
-        # dists = np.where(ds == 1, 7 - ss, ss)
-        # dists[ds == 0] = 8
-        # ds_nearest_edge = dists.min(axis=-1)
-        neighbor_squares = np.zeros(shape=ss.shape, dtype=np.int8)
-        next_neighbors_pos = ss + ds
-        # mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
-        not_set = np.ones(ss.size // 2, dtype=np.int8)
-        while np.any(not_set):
-            mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
-            neighbor_squares[~mask_inboard] = (next_neighbors_pos - ds)[~mask_inboard]
-            not_set[~mask_inboard] = 0
-            inboard_squares = next_neighbors_pos[mask_inboard]
-            square_type = self.board[inboard_squares[..., 0], inboard_squares[..., 1]]
-            mask_not_empty = square_type != 0
-            x = mask_inboard.copy()
-            x[x] &= mask_not_empty
-            neighbor_squares[x] = inboard_squares[mask_not_empty]
-            not_set[x] = 0
-            next_neighbors_pos += ds
-        return neighbor_squares
-
-    def generate_pawn_moves(self):
-
-        s1s_capture = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[1][2:]
-
-    def pawn_move_restriction(self, s0):
-        move_dirs = self.MOVE_VECTORS[1] * self.player
-        return np.array(
-            [
-                1 + self.pawn_not_yet_moved(s0),
-                self.pawn_can_capture_square(s0 + move_dirs[1]),
-                self.pawn_can_capture_square(s0 + move_dirs[2]),
-            ],
-            dtype=np.int8,
-        )
-
-    def pawn_not_yet_moved(self, s0):
-        return s0[0] == (1 if self.player == 1 else 6)
-
-    def is_enpassant_square(self, ss):
-        return np.all(ss == [(5 if self.player == 1 else 2), self.enpassant_file], axis=-1)
-
-    def pawn_can_capture_square(self, s1):
-        can_capture_enpassant = np.all(s1 == [(5 if self.player == 1 else 2), self.enpassant_file])
-        can_capture_normal = self.squares_are_inside_board(
-            ss=s1
-        ) and self.squares_belong_to_opponent(ss=s1)
-        return can_capture_normal or can_capture_enpassant
-
-    @property
-    def king_move_restriction(self):
-        move_restriction = np.ones(8, dtype=np.int8)
-        move_restriction[[2, -2]] += [
-            self.castling_right(side=1),
-            self.castling_right(side=-1)
-            and self.squares_are_empty(ss=np.array([0 if self.player == 1 else 7, 1])),
-        ]
-        return move_restriction
-
-    def generate_move_objects(self, s0, s1s, is_pawn=False):
-        moves = []
-        for s1 in s1s:
-            moves.extend(
-                Move(s0, s1, promoted)
-                for promoted in (
-                    np.array([2, 3, 4, 5], dtype=np.int8)
-                    if is_pawn and s1[0] == (7 if self.player == 1 else 0)
-                    else [None]
-                )
-            )
-        return moves
-
     def mask_absolute_pin(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
         """
         Whether a given number of orthogonal/diagonal directions from a given square are free
@@ -532,13 +477,71 @@ class ArrayJudge(Judge):
         # 3. Otherwise, only directions along the sk-vector are not pinned.
         return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
 
-    @property
-    def pos_king(self):
-        return self.squares_of_piece(self.king)[0]
+    def neighbor_squares_vectorized(self, ss, ds):
+        # dists = np.where(ds == 1, 7 - ss, ss)
+        # dists[ds == 0] = 8
+        # ds_nearest_edge = dists.min(axis=-1)
+        neighbor_squares = np.zeros(shape=ss.shape, dtype=np.int8)
+        next_neighbors_pos = ss + ds
+        # mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
+        not_set = np.ones(ss.size // 2, dtype=np.int8)
+        while np.any(not_set):
+            mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
+            neighbor_squares[~mask_inboard] = (next_neighbors_pos - ds)[~mask_inboard]
+            not_set[~mask_inboard] = 0
+            inboard_squares = next_neighbors_pos[mask_inboard]
+            square_type = self.board[inboard_squares[..., 0], inboard_squares[..., 1]]
+            mask_not_empty = square_type != 0
+            x = mask_inboard.copy()
+            x[x] &= mask_not_empty
+            neighbor_squares[x] = inboard_squares[mask_not_empty]
+            not_set[x] = 0
+            next_neighbors_pos += ds
+        return neighbor_squares
 
-    @property
-    def king(self):
-        return self.player * 6
+    def neighbor_squares(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
+        neighbor_positions = []
+        for d in ds:
+            neighbor_positions.append(self.neighbor_square(s=s, d=d))
+        return np.array(neighbor_positions)
+
+    def neighbor_square(self, s: np.ndarray, d: np.ndarray) -> np.ndarray:
+        """
+        Coordinates of the nearest neighbor to a given square, in a given cardinal direction.
+
+        Parameters
+        ----------
+        s : numpy.ndarray(shape=(2,), dtype=np.int8)
+            Coordinates of the square.
+        d : numpy.ndarray(shape=(2,), dtype=np.int8)
+            Direction from that square.
+            For example, `[1, -1]` means top-left (diagonal), and `[1, 0]` means top.
+
+        Returns
+        -------
+        numpy.ndarray
+            Coordinates of the nearest neighbor in the given direction.
+            If the given square is the last square on the board in the given direction, then
+            the coordinates of the square itself is returned. On the other hand, if there is
+            no piece in the given direction (but the square is not the last),
+            then coordinates of the last square in that direction is returned.
+        """
+        # Calculate distance to the nearest relevant edge. For orthogonal directions, this is the
+        # distance to the edge along that direction. For diagonal directions, this is the
+        # minimum of the distance to each of the two edges along that direction.
+        d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
+        # Get the square-indices that lie in that direction, up until the edge
+        squares_along_d = self.squares_in_between(s0=s, s1=s + (d_edge + 1) * d)
+        if squares_along_d.size == 0:
+            return s
+        # Get the corresponding square occupancies.
+        sub_board = self.board[squares_along_d[:, 0], squares_along_d[:, 1]]
+        # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
+        neighbors_idx = np.nonzero(sub_board)[0]
+        # If there are no neighbors in that direction, the index array will be empty. In this case
+        # we return the position of the last empty square in that direction. Otherwise,
+        # the first element corresponds to the index of nearest neighbor in that direction.
+        return squares_along_d[neighbors_idx[0] if neighbors_idx.size != 0 else -1]
 
     def squares_checking(
         self, s: Optional[np.ndarray] = None, p: Optional[np.int8] = None
@@ -617,80 +620,149 @@ class ArrayJudge(Judge):
         self.board[king_pos] = self.king  # put it back
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
-    def moves_resolving_check(self, attacking_squares: np.ndarray):
-        # Get the squares the king can move into to resolve check.
-        king_pos = self.pos_king
-        possible_squares = king_pos + self.DIRECTION_UNIT_VECTORS
-        inboard_squares = possible_squares[self.squares_are_inside_board(ss=possible_squares)]
-        vacant_squares = inboard_squares[
-            np.bitwise_not(self.squares_belong_to_player(inboard_squares))
+    def generate_pawn_moves(self):
+
+        s1s_capture = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[1][2:]
+
+    def pawn_move_restriction(self, s0):
+        move_dirs = self.MOVE_VECTORS[1] * self.player
+        return np.array(
+            [
+                1 + self.pawn_not_yet_moved(s0),
+                self.pawn_can_capture_square(s0 + move_dirs[1]),
+                self.pawn_can_capture_square(s0 + move_dirs[2]),
+            ],
+            dtype=np.int8,
+        )
+
+    def pawn_not_yet_moved(self, s0):
+        return s0[0] == (1 if self.player == 1 else 6)
+
+    def is_enpassant_square(self, ss):
+        return np.all(ss == [(5 if self.player == 1 else 2), self.enpassant_file], axis=-1)
+
+    def pawn_can_capture_square(self, s1):
+        can_capture_enpassant = np.all(s1 == [(5 if self.player == 1 else 2), self.enpassant_file])
+        can_capture_normal = self.squares_are_inside_board(
+            ss=s1
+        ) and self.squares_belong_to_opponent(ss=s1)
+        return can_capture_normal or can_capture_enpassant
+
+    @property
+    def king_move_restriction(self):
+        move_restriction = np.ones(8, dtype=np.int8)
+        move_restriction[[2, -2]] += [
+            self.castling_right(side=1),
+            self.castling_right(side=-1)
+            and self.squares_are_empty(ss=np.array([0 if self.player == 1 else 7, 1])),
         ]
-        safe_squares = vacant_squares[self.king_wont_be_attacked(ss=vacant_squares)]
-        resolving_moves = [
-            Move(start_square=king_pos, end_square=safe_square) for safe_square in safe_squares
-        ]
-        # In case of single checks, get the moves that block or capture the attacking piece.
-        if attacking_squares.shape[0] == 1:
-            # Find capturing moves
-            attacking_positions = self.squares_attacking(s=attacking_squares[0], p=self.player)
-            unpinned_mask = self.mask_absolute_pin(
-                s=attacking_squares[0], ds=attacking_squares[0] - attacking_positions
-            )
-            available_capturing_positions = attacking_positions[unpinned_mask]
-            for capturing_position in available_capturing_positions:
-                resolving_moves.append(
-                    Move(start_square=capturing_position, end_square=attacking_squares[0])
+        return move_restriction
+
+    def generate_move_objects(self, s0, s1s, is_pawn=False):
+        moves = []
+        for s1 in s1s:
+            moves.extend(
+                Move(s0, s1, promoted)
+                for promoted in (
+                    np.array([2, 3, 4, 5], dtype=np.int8)
+                    if is_pawn and s1[0] == (7 if self.player == 1 else 0)
+                    else [None]
                 )
-            # Find blocking moves
-            squares_in_between = self.squares_in_between(s0=attacking_squares[0], s1=king_pos)
-            for square in squares_in_between:
-                attacking_positions = self.squares_attacking(s=square, p=self.player)
+            )
+        return moves
 
-        return resolving_moves
-
-    def neighbor_squares(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
-        neighbor_positions = []
-        for d in ds:
-            neighbor_positions.append(self.neighbor_square(s=s, d=d))
-        return np.array(neighbor_positions)
-
-    def neighbor_square(self, s: np.ndarray, d: np.ndarray) -> np.ndarray:
+    def castling_right(self, side: int) -> bool:
         """
-        Coordinates of the nearest neighbor to a given square, in a given cardinal direction.
+        Whether current player has castling right for the given side.
 
         Parameters
         ----------
-        s : numpy.ndarray(shape=(2,), dtype=np.int8)
-            Coordinates of the square.
-        d : numpy.ndarray(shape=(2,), dtype=np.int8)
-            Direction from that square.
-            For example, `[1, -1]` means top-left (diagonal), and `[1, 0]` means top.
+        side : int
+            +1 for kingside, -1 for queenside.
+        """
+        return self.castling_rights[self.player, side]
+
+    def piece_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
+        """
+        Get the type of pieces on a given number of squares.
+
+        Parameters
+        ----------
+        ss : numpy.ndarray
+          Coordinates of n squares as an array of x dimensions
+          with shape (s_1, s_2, ..., s_{x-1}, 2), where the last dimension
+          corresponds to the file/rank coordinates. For the rest of the dimensions,
+          it holds that:  s_1 * s_2 * ... * s_{x-1} = n
 
         Returns
         -------
-        numpy.ndarray
-            Coordinates of the nearest neighbor in the given direction.
-            If the given square is the last square on the board in the given direction, then
-            the coordinates of the square itself is returned. On the other hand, if there is
-            no piece in the given direction (but the square is not the last),
-            then coordinates of the last square in that direction is returned.
+        Union[np.ndarray, np.int8]
+            Piece types as a single integer (when `ss` is 1-dimensional) or a 1d-array of size n.
         """
-        # Calculate distance to the nearest relevant edge. For orthogonal directions, this is the
-        # distance to the edge along that direction. For diagonal directions, this is the
-        # minimum of the distance to each of the two edges along that direction.
-        d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
-        # Get the square-indices that lie in that direction, up until the edge
-        squares_along_d = self.squares_in_between(s0=s, s1=s + (d_edge + 1) * d)
-        if squares_along_d.size == 0:
-            return s
-        # Get the corresponding square occupancies.
-        sub_board = self.board[squares_along_d[:, 0], squares_along_d[:, 1]]
-        # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
-        neighbors_idx = np.nonzero(sub_board)[0]
-        # If there are no neighbors in that direction, the index array will be empty. In this case
-        # we return the position of the last empty square in that direction. Otherwise,
-        # the first element corresponds to the index of nearest neighbor in that direction.
-        return squares_along_d[neighbors_idx[0] if neighbors_idx.size != 0 else -1]
+        return self.board[ss[..., 0], ss[..., 1]]
+
+    def squares_of_piece(self, p: int):
+        return np.argwhere(self.board == p)
+
+    @property
+    def squares_of_player(self):
+        return np.argwhere(np.sign(self.board) == self.player)
+
+    def squares_belong_to_player(self, ss: np.ndarray) -> bool:
+        """
+        Whether a given square has a piece on it belonging to the player in turn.
+        """
+        return np.sign(self.piece_in_squares(ss=ss)) == self.player
+
+    def squares_belong_to_opponent(self, ss: np.ndarray) -> bool:
+        """
+        Whether a given square has a piece on it belonging to the opponent.
+        """
+        return np.sign(self.piece_in_squares(ss=ss)) == self.player * -1
+
+    def squares_are_empty(self, ss: np.ndarray):
+        return self.piece_in_squares(ss=ss) == 0
+
+    def pieces_belong_to_player(
+        self, ps: Union[np.int8, np.ndarray]
+    ) -> Union[np.bool_, np.ndarray]:
+        return np.sign(ps) == self.player
+
+    def pieces_belong_to_opponent(
+        self, ps: Union[np.int8, np.ndarray]
+    ) -> Union[np.bool_, np.ndarray]:
+        return np.sign(ps) == self.player * -1
+
+    @property
+    def is_dead_position(self):
+        return
+
+    @property
+    def pos_king(self):
+        return self.squares_of_piece(self.king)[0]
+
+    @property
+    def king(self):
+        return self.player * 6
+
+    @property
+    def move_is_promotion(self) -> bool:
+        return
+
+    @property
+    def board_is_checkmate(self) -> bool:
+        return
+
+    @property
+    def board_is_draw(self) -> bool:
+        return
+
+    @property
+    def game_over(self) -> bool:
+        return self.board_is_checkmate or self.board_is_draw
+
+    def player_is_checked(self) -> bool:
+        pass
 
     @staticmethod
     def squares_in_between(s0: np.ndarray, s1: np.ndarray) -> np.ndarray:
@@ -755,87 +827,6 @@ class ArrayJudge(Judge):
         is_cardinal = np.abs(move_unit_vect).max(axis=-1) == 1
         return move_vect, move_unit_vect, move_vect_multiplier, is_cardinal
 
-    @property
-    def move_is_promotion(self) -> bool:
-        return
-
-    @property
-    def board_is_checkmate(self) -> bool:
-        return
-
-    @property
-    def board_is_draw(self) -> bool:
-        return
-
-    @property
-    def game_over(self) -> bool:
-        return self.board_is_checkmate or self.board_is_draw
-
-    def player_is_checked(self) -> bool:
-        pass
-
-    def castling_right(self, side: int) -> bool:
-        """
-        Whether current player has castling right for the given side.
-
-        Parameters
-        ----------
-        side : int
-            +1 for kingside, -1 for queenside.
-        """
-        return self.castling_rights[self.player, side]
-
-    def piece_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
-        """
-        Get the type of pieces on a given number of squares.
-
-        Parameters
-        ----------
-        ss : numpy.ndarray
-          Coordinates of n squares as an array of x dimensions
-          with shape (s_1, s_2, ..., s_{x-1}, 2), where the last dimension
-          corresponds to the file/rank coordinates. For the rest of the dimensions,
-          it holds that:  s_1 * s_2 * ... * s_{x-1} = n
-
-        Returns
-        -------
-        Union[np.ndarray, np.int8]
-            Piece types as a single integer (when `ss` is 1-dimensional) or a 1d-array of size n.
-        """
-        return self.board[ss[..., 0], ss[..., 1]]
-
-    def squares_of_piece(self, p: int):
-        return np.argwhere(self.board == p)
-
-    @property
-    def squares_of_player(self):
-        return np.argwhere(np.sign(self.board) == self.player)
-
-    def squares_belong_to_player(self, ss: np.ndarray) -> bool:
-        """
-        Whether a given square has a piece on it belonging to the player in turn.
-        """
-        return np.sign(self.piece_in_squares(ss=ss)) == self.player
-
-    def squares_belong_to_opponent(self, ss: np.ndarray) -> bool:
-        """
-        Whether a given square has a piece on it belonging to the opponent.
-        """
-        return np.sign(self.piece_in_squares(ss=ss)) == self.player * -1
-
-    def squares_are_empty(self, ss: np.ndarray):
-        return self.piece_in_squares(ss=ss) == 0
-
-    def pieces_belong_to_player(
-        self, ps: Union[np.int8, np.ndarray]
-    ) -> Union[np.bool_, np.ndarray]:
-        return np.sign(ps) == self.player
-
-    def pieces_belong_to_opponent(
-        self, ps: Union[np.int8, np.ndarray]
-    ) -> Union[np.bool_, np.ndarray]:
-        return np.sign(ps) == self.player * -1
-
     @staticmethod
     def squares_are_inside_board(ss: np.ndarray) -> np.ndarray:
         """
@@ -896,3 +887,12 @@ class ArrayJudge(Judge):
                 return move_abs[0] == move_abs[1] or np.isin(0, move_abs)
             case 6:
                 return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
+
+    def generate_move_objects_vectorized(self, s0s, s1s, is_promotion):
+        moves = []
+        for s0, s1, p in zip(s0s, s1s, is_promotion):
+            moves.extend(
+                Move(s0, s1, piece)
+                for piece in (np.array([2, 3, 4, 5], dtype=np.int8) if p else [None])
+            )
+        return moves
