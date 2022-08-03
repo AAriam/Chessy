@@ -406,6 +406,9 @@ class ArrayJudge(Judge):
     def pawn_not_yet_moved(self, s0):
         return s0[0] == (1 if self.player == 1 else 6)
 
+    def is_enpassant_square(self, ss):
+        return np.all(ss == [(5 if self.player == 1 else 2), self.enpassant_file], axis=-1)
+
     def pawn_can_capture_square(self, s1):
         can_capture_enpassant = np.all(s1 == [(5 if self.player == 1 else 2), self.enpassant_file])
         can_capture_normal = self.squares_are_inside_board(ss=s1) and self.squares_belong_to_opponent(ss=s1)
