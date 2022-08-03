@@ -454,7 +454,7 @@ class ArrayJudge(Judge):
         # all the earlier ones may result in a wrong conclusion)
         # 1. If the square-king (sk) vector is not cardinal, then regardless of direction,
         # no move from that square is pinned.
-        sk_v, sk_uv, sk_vm, is_cardinal = ArrayJudge.move_dir_mag(s0=s, s1=self.position_king)
+        sk_v, sk_uv, sk_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=s, s1s=self.pos_king)
         if not is_cardinal:
             return np.ones(shape=ds.shape[0], dtype=np.bool_)
         # 2. If there is a piece between the square and the king, or to the other side
@@ -470,7 +470,7 @@ class ArrayJudge(Judge):
         return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
 
     @property
-    def position_king(self):
+    def pos_king(self):
         return self.squares_of_piece(self.king)[0]
 
     @property
@@ -543,12 +543,12 @@ class ArrayJudge(Judge):
         squares_checking = self.squares_checking(s=s, p=p)
         unpin_mask = []
         for square in squares_checking:
-            move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0=square, s1=s)
+            move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=square, s1s=s)
             unpin_mask.append(self.mask_absolute_pin(s=square, ds=np.expand_dims(move_uv))[0])
         return squares_checking[unpin_mask]
 
     def king_wont_be_attacked(self, ss: np.ndarray):
-        king_pos = tuple(self.position_king)
+        king_pos = tuple(self.pos_king)
         self.board[king_pos] = 0  # temporarily remove king from board
         square_is_not_attacked = [self.squares_checking(s=square).size == 0 for square in ss]
         self.board[king_pos] = self.king  # put it back
@@ -556,7 +556,7 @@ class ArrayJudge(Judge):
 
     def moves_resolving_check(self, attacking_squares: np.ndarray):
         # Get the squares the king can move into to resolve check.
-        king_pos = self.position_king
+        king_pos = self.pos_king
         possible_squares = king_pos + self.DIRECTION_UNIT_VECTORS
         inboard_squares = possible_squares[self.squares_are_inside_board(ss=possible_squares)]
         vacant_squares = inboard_squares[
@@ -646,7 +646,7 @@ class ArrayJudge(Judge):
             If the squares are the same, or not on an orthogonal/diagonal direction, then
             an empty array of shape (0, 2) is returned.
         """
-        move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0=s0, s1=s1)
+        move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=s0, s1s=s1)
         in_between_squares = (
             s0
             + np.arange(
@@ -740,7 +740,7 @@ class ArrayJudge(Judge):
         """
         return self.board[ss[..., 0], ss[..., 1]]
 
-    def squares_of_piece(self, p: np.int8):
+    def squares_of_piece(self, p: int):
         return np.argwhere(self.board == p)
 
     @property
