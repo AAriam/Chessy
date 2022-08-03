@@ -237,36 +237,45 @@ class ArrayJudge(Judge):
         unpin_mask = self.mask_unpinned_absolute_vectorized(s0s=s0s, s1s=s1s)
 
     def mask_unpinned_absolute_vectorized(self, s0s, s1s):
-        s0ks_v, s0ks_uv, s0ks_vm, s0ks_cardinal_mask = ArrayJudge.move_dir_mag(s0s=s0s, s1s=self.position_king)
-        s01s_v, s01s_uv, s01s_vm, s01s_cardinal_mask = ArrayJudge.move_dir_mag(s0s=s0s, s1s=s1s)
-        move_towards_king = s01s_uv[s0ks_cardinal_mask] == s0ks_uv[s0ks_cardinal_mask]
-        move_opposite_king = s01s_uv[s0ks_cardinal_mask] == -s0ks_uv[s0ks_cardinal_mask]
-        mask_move_along_s0k = (move_towards_king[..., 0] & move_towards_king[..., 1]) | (move_opposite_king[..., 0] & move_opposite_king[..., 1])
+        current_unpin_mask = np.zeros(s0s.size // 2, dtype=np.bool_)
+
+        _, s0ks_uv, _, s0ks_cardinal_mask = ArrayJudge.move_dir_mag(s0s=s0s, s1s=self.pos_king)
+        current_unpin_mask[~s0ks_cardinal_mask] = True
+
+        _, s01s_uv, _, _ = ArrayJudge.move_dir_mag(s0s=s0s, s1s=s1s)
+        move_towards_king = s01s_uv[~current_unpin_mask] == s0ks_uv[~current_unpin_mask]
+        move_opposite_king = s01s_uv[~current_unpin_mask] == -s0ks_uv[~current_unpin_mask]
+        mask_move_along_s0k = (move_towards_king[..., 0] & move_towards_king[..., 1]) | (
+            move_opposite_king[..., 0] & move_opposite_king[..., 1]
+        )
+        current_unpin_mask[~current_unpin_mask] = mask_move_along_s0k
+
         kingside_neighbors_squares = self.neighbor_squares_vectorized(
-                ss=s0s[s0ks_cardinal_mask][~mask_move_along_s0k],
-                ds=s0ks_v[s0ks_cardinal_mask][~mask_move_along_s0k]
-            )
+            ss=s0s[~current_unpin_mask],
+            ds=s0ks_uv[~current_unpin_mask],
+        )
         kingside_neighbors = self.piece_in_squares(ss=kingside_neighbors_squares)
         mask_king_protected = kingside_neighbors != self.king
+        current_unpin_mask[~current_unpin_mask] = mask_king_protected
+
         otherside_neighbors_squares = self.neighbor_squares_vectorized(
-            ss=s0s[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected],
-            ds=-s0ks_v[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected],
+            ss=s0s[~current_unpin_mask],
+            ds=-s0ks_uv[~current_unpin_mask],
         )
         otherside_neighbors = self.piece_in_squares(ss=otherside_neighbors_squares)
         no_queen = otherside_neighbors != -self.player * 5
-        has_orthogonal_dir = s0ks_uv[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected] == 0
+        has_orthogonal_dir = (
+            s0ks_uv[~current_unpin_mask] == 0
+        )
         is_orthogonal = has_orthogonal_dir[..., 0] | has_orthogonal_dir[..., 1]
         no_rooks = otherside_neighbors[is_orthogonal] != -self.player * 4
         no_bishops = otherside_neighbors[~is_orthogonal] != -self.player * 3
         mask_no_pinning = no_queen
         mask_no_pinning[is_orthogonal] &= no_rooks
         mask_no_pinning[~is_orthogonal] &= no_bishops
+        current_unpin_mask[~current_unpin_mask] = mask_no_pinning
 
-        unpinned_mask = ~s0ks_cardinal_mask
-        unpinned_mask[s0ks_cardinal_mask] |= mask_move_along_s0k
-        unpinned_mask[s0ks_cardinal_mask][~mask_move_along_s0k] |= mask_king_protected
-        unpinned_mask[s0ks_cardinal_mask][~mask_move_along_s0k][~mask_king_protected] |= mask_no_pinning
-        return unpinned_mask
+        return current_unpin_mask
 
     def neighbor_squares_vectorized(self, ss, ds):
         # dists = np.where(ds == 1, 7 - ss, ss)
