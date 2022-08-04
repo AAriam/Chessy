@@ -286,7 +286,7 @@ class ArrayJudge(Judge):
         ]
         safe_squares = vacant_squares[self.king_wont_be_attacked(ss=vacant_squares)]
         resolving_moves = [
-            Move(start_square=king_pos, end_square=safe_square) for safe_square in safe_squares
+            Move(s0=king_pos, s1=safe_square) for safe_square in safe_squares
         ]
         # In case of single checks, get the moves that block or capture the attacking piece.
         if attacking_squares.shape[0] == 1:
@@ -298,7 +298,7 @@ class ArrayJudge(Judge):
             available_capturing_positions = attacking_positions[unpinned_mask]
             for capturing_position in available_capturing_positions:
                 resolving_moves.append(
-                    Move(start_square=capturing_position, end_square=attacking_squares[0])
+                    Move(s0=capturing_position, s1=attacking_squares[0])
                 )
             # Find blocking moves
             squares_in_between = self.squares_in_between(s0=attacking_squares[0], s1=king_pos)
