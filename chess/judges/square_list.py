@@ -516,7 +516,7 @@ class ArrayJudge(Judge):
         unpin_mask = []
         for square in squares_checking:
             move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=square, s1s=s)
-            unpin_mask.append(self.mask_absolute_pin(s=square, ds=np.expand_dims(move_uv))[0])
+            unpin_mask.append(self.mask_absolute_pin(s=square, ds=np.expand_dims(move_uv, axis=0))[0])
         return squares_checking[unpin_mask]
 
     def king_wont_be_attacked(self, ss: np.ndarray):
