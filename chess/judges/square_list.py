@@ -286,7 +286,7 @@ class ArrayJudge(Judge):
 
             is_promotion = (s1s_valid[..., 0] == (7 if self.player == 1 else 0)) & (piece_type in [11, 13])
             valid_moves.extend(
-                self.generate_move_objects_vectorized(
+                self.generate_move_objects(
                     s0s=s0s_valid, s1s=s1s_valid, is_promotion=is_promotion
                 )
             )
@@ -580,19 +580,6 @@ class ArrayJudge(Judge):
         ]
         return move_restriction
 
-    def generate_move_objects(self, s0, s1s, is_pawn=False):
-        moves = []
-        for s1 in s1s:
-            moves.extend(
-                Move(s0, s1, promoted)
-                for promoted in (
-                    np.array([2, 3, 4, 5], dtype=np.int8)
-                    if is_pawn and s1[0] == (7 if self.player == 1 else 0)
-                    else [None]
-                )
-            )
-        return moves
-
     def castling_right(self, side: int) -> bool:
         """
         Whether current player has castling right for the given side.
@@ -810,7 +797,8 @@ class ArrayJudge(Judge):
             case 6:
                 return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
 
-    def generate_move_objects_vectorized(self, s0s, s1s, is_promotion):
+    @staticmethod
+    def generate_move_objects(s0s, s1s, is_promotion):
         moves = []
         for s0, s1, p in zip(s0s, s1s, is_promotion):
             moves.extend(
