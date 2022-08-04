@@ -478,7 +478,7 @@ class ArrayJudge(Judge):
         knight_pos = s + self.MOVE_VECTORS[2]
         # Take those end squares that are within the board
         inboards = knight_pos[self.squares_are_inside_board(ss=knight_pos)]
-        mask_knight = self.board[inboards[:, 0], inboards[:, 1]] == p * 2
+        mask_knight = self.piece_in_squares(inboards) == p * 2
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get nearest neighbor in each direction
         neighbors_pos = self.neighbor_squares(s=s, ds=self.DIRECTION_UNIT_VECTORS)
