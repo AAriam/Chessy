@@ -212,7 +212,7 @@ class ArrayJudge(Judge):
                     & b_file_empty
                 )
                 cond.dtype = np.bool_
-                return cond
+                return cond[np.squeeze(mask_inboard)]
             else:
                 return ~self.squares_belong_to_player(ss=s1s_valid)
 
@@ -221,21 +221,25 @@ class ArrayJudge(Judge):
                 return self.king_wont_be_attacked(ss=s1s_valid)
             elif piece_type == 62:
                 return self.king_wont_be_attacked(ss=s1s_valid) & self.king_wont_be_attacked(
-                    ss=s1s_valid - [[0, -self.player], [0, self.player]]
+                    ss=s1s_valid - np.array([[0, -self.player], [0, self.player]])[np.squeeze(mask_inboard)]
                 )
             else:
                 return self.mask_unpinned_absolute_vectorized(s0s=s0s_valid, s1s=s1s_valid)
 
         valid_moves = []
         for piece_type in [11, 12, 13, 2, 3, 4, 5, 61, 62]:
-            s0s = self.squares_of_piece(p=(piece_type if piece_type<10 else piece_type//10)*self.player)
-            s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[piece_type] * self.player
+            s0s = self.squares_of_piece(
+                p=(piece_type if piece_type < 10 else piece_type // 10) * self.player
+            )
+            s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[piece_type] * (self.player if piece_type == 1 else 1)
             mask_inboard = self.squares_are_inside_board(ss=s1s)
             s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
             s1s_valid = s1s[mask_inboard]
             if s1s_valid.size == 0:
                 continue
-            update_view(mask_can_move_into())
+            mask_vacant = mask_can_move_into()
+            update_view(mask_vacant)
+            mask_inboard[mask_inboard] = mask_vacant
             if s1s_valid.size == 0:
                 continue
             update_view(check_mask())
