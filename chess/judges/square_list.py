@@ -32,22 +32,6 @@ class ArrayJudge(Judge):
     UNIT_VECTORS_ORTHO = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]], dtype=np.int8)
     UNIT_VECTORS_DIAG = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]], dtype=np.int8)
 
-    # All possible move vectors for a piece
-    MOVE_VECTORS = {
-        1: np.array([[1, 0], [1, 1], [1, -1]], dtype=np.int8),
-        2: np.array(
-            [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
-        ),
-        3: np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]], dtype=np.int8),
-        4: np.array([[1, 0], [0, 1], [-1, 0], [0, -1]], dtype=np.int8),
-        5: np.array(
-            [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
-        ),
-        6: np.array(
-            [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
-        ),
-    }
-
     MOVE_VECTORS_PIECE = {
         11: np.array([[1, 0]], dtype=np.int8),  # Pawn vertical advance
         12: np.array([[2, 0]], dtype=np.int8),  # Pawm double vertical advance
