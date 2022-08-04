@@ -384,25 +384,39 @@ class ArrayJudge(Judge):
         return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
 
     def neighbor_squares_vectorized(self, ss, ds):
-        # dists = np.where(ds == 1, 7 - ss, ss)
-        # dists[ds == 0] = 8
-        # ds_nearest_edge = dists.min(axis=-1)
         neighbor_squares = np.zeros(shape=ss.shape, dtype=np.int8)
         next_neighbors_pos = ss + ds
-        # mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
-        not_set = np.ones(ss.size // 2, dtype=np.int8)
+        not_set = np.ones(ss.size // 2, dtype=np.bool_)
+
         while np.any(not_set):
-            mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos)
-            neighbor_squares[~mask_inboard] = (next_neighbors_pos - ds)[~mask_inboard]
-            not_set[~mask_inboard] = 0
-            inboard_squares = next_neighbors_pos[mask_inboard]
-            square_type = self.board[inboard_squares[..., 0], inboard_squares[..., 1]]
-            mask_not_empty = square_type != 0
-            x = mask_inboard.copy()
-            x[x] &= mask_not_empty
-            neighbor_squares[x] = inboard_squares[mask_not_empty]
-            not_set[x] = 0
+            mask_inboard = self.squares_are_inside_board(ss=next_neighbors_pos[not_set])
+            curr_mask = not_set.copy()
+            curr_mask[curr_mask] = ~mask_inboard
+            neighbor_squares[curr_mask] = next_neighbors_pos[curr_mask] - ds[curr_mask]
+            not_set[not_set] = mask_inboard
+            inboard_squares = next_neighbors_pos[not_set]
+            mask_occupied = self.piece_in_squares(ss=inboard_squares) != 0
+            curr_mask = not_set.copy()
+            curr_mask[curr_mask] = mask_occupied
+            neighbor_squares[curr_mask] = inboard_squares[mask_occupied]
+            not_set[not_set] = ~mask_occupied
             next_neighbors_pos += ds
+            # curr_mask = not_set.copy()
+            # #current_mask[current_mask] &= ~mask_inboard
+            # not_set[not_set] &= mask_inboard
+            # curr_mask[curr_mask] &= ~mask_inboard
+            # neighbor_squares[curr_mask] = (next_neighbors_pos - ds)[curr_mask]
+            # #curr_mask[not_set] &= mask_inboard
+            # #not_set[~mask_inboard] = 0
+            # inboard_squares = next_neighbors_pos[not_set]
+            # square_type = self.board[inboard_squares[..., 0], inboard_squares[..., 1]]
+            # mask_not_empty = square_type != 0
+            # not_set[not_set] &= ~mask_not_empty
+            # #curr_mask[curr_mask] &= mask_not_empty
+            # #x = mask_inboard.copy()
+            # #x[x] &= mask_not_empty
+            # neighbor_squares[curr_mask] = inboard_squares[curr_mask]
+            # #not_set[x] = 0
         return neighbor_squares
 
     def neighbor_squares(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
