@@ -85,15 +85,15 @@ class Move(NamedTuple):
         Piece number to promote a pawn into, when the move is a promotion.
     """
 
-    start_square: np.ndarray
-    end_square: np.ndarray
-    promote_to: Optional[np.int8] = None
+    s0: np.ndarray
+    s1: np.ndarray
+    p_promo: Optional[np.int8] = None
 
     def __eq__(self, other):
         return (
-            np.all(self.start_square == other.start_square)
-            and np.all(self.end_square == other.end_square)
-            and self.promote_to == other.promote_to
+                np.all(self.s0 == other.s0)
+                and np.all(self.s1 == other.s1)
+                and self.p_promo == other.p_promo
         )
 
 

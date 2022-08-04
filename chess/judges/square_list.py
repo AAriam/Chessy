@@ -95,24 +95,24 @@ class ArrayJudge(Judge):
         return self._valid_moves
 
     def submit_move(self, move: Move) -> NoReturn:
-        move_vect = move.end_square - move.start_square
-        piece = self.piece_in_squares(ss=move.start_square)
-        piece_name = PIECE[self.piece_types(piece)].name
+        move_vect = move.s1 - move.s0
+        piece = self.piece_in_squares(ss=move.s0)
         if self.is_checkmate:
             raise GameOverError("Game over. Current player is checkmated.")
         if self.is_draw:
             raise GameOverError("Game over. It is a draw.")
-        if not self.squares_are_inside_board(ss=move.start_square):
+        if not self.squares_are_inside_board(ss=move.s0):
             raise IllegalMoveError("Start-square is out of board.")
         if not piece:
             raise IllegalMoveError("Start-square is empty.")
-        if not self.squares_belong_to_player(ss=move.start_square):
+        if not self.squares_belong_to_player(ss=move.s0):
             raise IllegalMoveError(f"It is {COLOR[self.player].name}'s turn.")
-        if not self.squares_are_inside_board(ss=move.end_square):
+        if not self.squares_are_inside_board(ss=move.s1):
             raise IllegalMoveError("End-square is out of board.")
-        if np.all(move.start_square == move.end_square):
+        if np.all(move.s0 == move.s1):
             raise IllegalMoveError("Start and end-square are the same.")
         if not self.move_principally_legal_for_piece(p=piece, move_vect=move_vect):
+            piece_name = PIECE[self.piece_types(piece)].name
             raise IllegalMoveError(
                 f"{piece_name.capitalize()}s cannot move in direction {move_vect}."
             )
@@ -124,38 +124,38 @@ class ArrayJudge(Judge):
         return
 
     def apply_move(self, move: Move) -> None:
-        piece_at_end_square = self.piece_in_squares(ss=move.start_square)
+        piece_at_end_square = self.piece_in_squares(ss=move.s0)
         moving_piece_type = self.piece_types(piece_at_end_square)
-        captured_piece = self.piece_in_squares(ss=move.end_square)
+        captured_piece = self.piece_in_squares(ss=move.s1)
         if captured_piece != 0:
             self.fifty_move_count = -1
-        move_vec = move.end_square - move.start_square
+        move_vec = move.s1 - move.s0
         move_vec_mag = np.abs(move_vec)
         if moving_piece_type == 1:
             # Handle promotions and en passant
             self.fifty_move_count = -1
-            if move.promote_to is not None:
-                piece_at_end_square = move.promote_to * self.player
+            if move.p_promo is not None:
+                piece_at_end_square = move.p_promo * self.player
             if np.all(move_vec_mag == [1, 1]) and captured_piece == 0:
-                self.board[move.end_square[0] - self.player, move.end_square[1]] = 0
-            self.enpassant_file = move.end_square[1] if move_vec_mag[0] == 2 else -1
+                self.board[move.s1[0] - self.player, move.s1[1]] = 0
+            self.enpassant_file = move.s1[1] if move_vec_mag[0] == 2 else -1
         else:
             self.enpassant_file = -1
             # Apply castling and/or modify castling rights
             if moving_piece_type == 6:
                 self.castling_rights[self.player] = 0
                 if move_vec_mag[1] == 2:
-                    rook_pos = (move.end_square[0], 7 if move_vec[1] == 2 else 0)
-                    rook_end_pos = (move.end_square[0], 5 if move_vec[1] == 2 else 3)
+                    rook_pos = (move.s1[0], 7 if move_vec[1] == 2 else 0)
+                    rook_end_pos = (move.s1[0], 5 if move_vec[1] == 2 else 3)
                     self.board[rook_pos] = 0
                     self.board[rook_end_pos] = 4 * self.player
             elif moving_piece_type == 4:
-                if move.start_square[1] == 0:
+                if move.s0[1] == 0:
                     self.castling_rights[self.player, -1] = 0
-                elif move.start_square[1] == 7:
+                elif move.s0[1] == 7:
                     self.castling_rights[self.player, 1] = 0
-        self.board[tuple(move.end_square)] = piece_at_end_square
-        self.board[tuple(move.start_square)] = 0
+        self.board[tuple(move.s1)] = piece_at_end_square
+        self.board[tuple(move.s0)] = 0
         self.fifty_move_count += 1
         self.player *= -1
         self.analyze_state()
