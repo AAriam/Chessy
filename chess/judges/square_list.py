@@ -206,17 +206,17 @@ class ArrayJudge(Judge):
             s1s_valid = s1s_valid[mask]
 
         def mask_can_move_into():
-            if piece_type == 13:
+            if piece_type == 11:
+                return self.squares_are_empty(ss=s1s_valid)
+            elif piece_type == 12:
+                return (
+                        (s0s_valid[..., 0] == (1 if self.player == 1 else 6)) &
+                        (self.squares_are_empty(ss=s0s_valid + [self.player, 0])) &
+                        (self.squares_are_empty(ss=s1s_valid))
+                )
+            elif piece_type == 13:
                 # For pawn captures
                 return self.squares_belong_to_opponent(ss=s1s_valid) | self.is_enpassant_square(
-                    ss=s1s_valid
-                )
-            elif piece_type == 12:
-                return s0s_valid[..., 0] == (
-                    1 if self.player == 1 else 6
-                ) & ~self.squares_belong_to_player(
-                    ss=s0s_valid + [1, 0]
-                ) & ~self.squares_belong_to_player(
                     ss=s1s_valid
                 )
             elif piece_type == 62:
