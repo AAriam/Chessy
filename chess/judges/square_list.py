@@ -873,7 +873,9 @@ class ArrayJudge(Judge):
         moves = []
         for s0, s1, p in zip(s0s, s1s, is_promotion):
             moves.extend(
-                Move(s0, s1, piece)
-                for piece in (np.array([2, 3, 4, 5], dtype=np.int8) if p else [None])
+                [
+                    Move(s0, s1, piece)
+                    for piece in (np.array([2, 3, 4, 5], dtype=np.int8) if p else [None])
+                ]
             )
         return moves
