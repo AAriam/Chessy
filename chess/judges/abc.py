@@ -36,8 +36,9 @@ class Judge(ABC):
         """
         ...
 
+    @property
     @abstractmethod
-    def generate_all_valid_moves(self) -> list[Move]:
+    def valid_moves(self) -> list[Move]:
         """
         Generate all valid moves for the current player.
         A move is represented as a new BoardState object.

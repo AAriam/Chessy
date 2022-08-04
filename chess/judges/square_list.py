@@ -81,7 +81,7 @@ class ArrayJudge(Judge):
         self.is_checkmate: bool = False
         self.is_check: bool = False
         self.is_draw: bool = False
-        self.valid_moves: list[Move] = []
+        self._valid_moves: list[Move] = []
         self.analyze_state()
         return
 
@@ -106,6 +106,10 @@ class ArrayJudge(Judge):
             ply_count=self.ply_count,
         )
 
+    @property
+    def valid_moves(self) -> list[Move]:
+        return self._valid_moves
+
     def submit_move(self, move: Move) -> NoReturn:
         move_vect = move.end_square - move.start_square
         piece = self.piece_in_squares(ss=move.start_square)
@@ -128,7 +132,7 @@ class ArrayJudge(Judge):
             raise IllegalMoveError(
                 f"{piece_name.capitalize()}s cannot move in direction {move_vect}."
             )
-        if move not in self.valid_moves:
+        if move not in self._valid_moves:
             if self.is_check:
                 raise IllegalMoveError("Move does not resolve check.")
             raise IllegalMoveError("Submitted move is illegal.")
@@ -176,7 +180,7 @@ class ArrayJudge(Judge):
     def analyze_state(self):
         if self.fifty_move_count == 100 or self.is_dead_position:
             self.is_draw = True
-            self.valid_moves = []
+            self._valid_moves = []
         else:
             cheking_squares = self.squares_checking()
             if cheking_squares.size != 0:
@@ -193,7 +197,7 @@ class ArrayJudge(Judge):
                 #     valid_moves.extend(self.generate_moves_for_square(square))
                 if not valid_moves:
                     self.is_draw = True
-            self.valid_moves = valid_moves
+            self._valid_moves = valid_moves
         return
 
     def generate_all_valid_moves(self) -> list[Move]:
