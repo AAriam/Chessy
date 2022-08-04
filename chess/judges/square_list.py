@@ -224,12 +224,14 @@ class ArrayJudge(Judge):
                 b_file_empty[0 if self.player == 1 else 1] = self.squares_are_empty(
                     ss=s1s_valid[0 if self.player == 1 else 1] - [0, 1]
                 )
-                return (
+                cond = (
                     self.castling_rights[self.player, [-self.player, self.player]]
                     & self.squares_are_empty(ss=s1s_valid)
                     & self.squares_are_empty(ss=s1s_valid - [[0, -self.player], [0, self.player]])
                     & b_file_empty
                 )
+                cond.dtype = np.bool_
+                return cond
             else:
                 return ~self.squares_belong_to_player(ss=s1s_valid)
 
