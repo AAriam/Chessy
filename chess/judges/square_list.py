@@ -282,9 +282,7 @@ class ArrayJudge(Judge):
         king_pos = self.pos_king
         possible_squares = king_pos + self.DIRECTION_UNIT_VECTORS
         inboard_squares = possible_squares[self.squares_are_inside_board(ss=possible_squares)]
-        vacant_squares = inboard_squares[
-            np.bitwise_not(self.squares_belong_to_player(inboard_squares))
-        ]
+        vacant_squares = inboard_squares[~self.squares_belong_to_player(inboard_squares)]
         safe_squares = vacant_squares[self.king_wont_be_attacked(ss=vacant_squares)]
         resolving_moves = [
             Move(s0=king_pos, s1=safe_square) for safe_square in safe_squares
