@@ -78,8 +78,6 @@ class ChessGame:
 
         return True
 
-
-
     def move_is_blocked(self, s0: np.ndarray, s1: np.ndarray) -> bool:
         """
         Whether a straight-line way from start-square to end-square is blocked by any piece.

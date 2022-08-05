@@ -5,6 +5,7 @@ This module contains the data structures and conventions used in the whole progr
 # Standard library
 from __future__ import annotations
 from typing import NamedTuple, Optional
+
 # 3rd party
 import numpy as np
 
@@ -41,6 +42,7 @@ class BoardState(NamedTuple):
     ply_count : numpy.int16
         The number of plies (half-moves) from the beginning of the game. Starts at 0.
     """
+
     board: np.ndarray
     castling_rights: np.ndarray
     player: np.int8
@@ -59,13 +61,13 @@ class BoardState(NamedTuple):
         """
         # Set up board
         board = np.zeros(shape=(8, 8), dtype=np.int8)  # Initialize an all-zero 8x8 array
-        board[(1, -2), ] = [1], [-1]  # Set white and black pawns on rows 2 and 7
+        board[(1, -2), :] = [[1], [-1]]  # Set white and black pawns on rows 2 and 7
         board[0, :] = [4, 2, 3, 5, 6, 3, 2, 4]  # Set white's main pieces on row 1
         board[-1, :] = -board[0]  # Set black's main pieces on row 8
         # Set instance attributes describing the game state to their initial values
         return cls(
             board=board,
-            castling_rights=np.ones(shape=(2, 2), dtype=np.int8),
+            castling_rights=np.ones(shape=(2, 2), dtype=np.bool_),
             player=np.int8(1),
             enpassant_file=np.int8(-1),
             fifty_move_count=np.int8(0),
@@ -91,9 +93,9 @@ class Move(NamedTuple):
 
     def __eq__(self, other):
         return (
-                np.all(self.s0 == other.s0)
-                and np.all(self.s1 == other.s1)
-                and self.p_promo == other.p_promo
+            np.all(self.s0 == other.s0)
+            and np.all(self.s1 == other.s1)
+            and self.p_promo == other.p_promo
         )
 
 
@@ -133,6 +135,7 @@ FILE = {0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
 RANK = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5", 5: "6", 6: "7", 7: "8"}
 SQUARE = {
     (rank_idx, file_idx): f"{file}{rank}"
-    for rank_idx, rank in RANK.items() for file_idx, file in FILE.items()
+    for rank_idx, rank in RANK.items()
+    for file_idx, file in FILE.items()
 }
 CASTLE = {0: "kingside", 1: "queenside"}

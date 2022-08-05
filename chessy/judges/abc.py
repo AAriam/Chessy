@@ -6,16 +6,16 @@ This module contains the abstract base class (abc) for all Chessboard classes.
 from __future__ import annotations
 from typing import NamedTuple, Any, Tuple, Sequence, NoReturn, Optional
 from abc import ABC, abstractmethod
+
 # 3rd party
 import numpy as np
+
 # Self
 from ..board_representation import BoardState, Move
 
 
 class Judge(ABC):
-    """
-
-    """
+    """ """
 
     @abstractmethod
     def __init__(self):

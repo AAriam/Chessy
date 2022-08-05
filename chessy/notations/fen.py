@@ -1,7 +1,8 @@
+from ..board_representation import BoardState
+from . import mappings
 
 
-
-def parse_fen(record: str) -> tuple[list[list[int]], list[list[int]], int, int, int, int]:
+def fen_to_boardstate(record: str) -> BoardState:
     """
     Parse a Forsyth–Edwards Notation (FEN) record to transform the data into a format accepted
     by the class `boards.abc.Chessboard`.
@@ -14,6 +15,7 @@ def parse_fen(record: str) -> tuple[list[list[int]], list[list[int]], int, int, 
     Returns
     -------
     tuple[list[list[int]], list[list[int]], int, int, int, int]
+    A new Chessboard object with the given board position.
         Board, castling status, current player (turn), fifty-move count, en passant file,
         and ply count, respectively. For more information, see `boards.abc.Chessboard`.
     """
@@ -27,13 +29,13 @@ def parse_fen(record: str) -> tuple[list[list[int]], list[list[int]], int, int, 
             castling_avail,
             enpassant_square,
             halfmove_clock,
-            fullmove_num
+            fullmove_num,
         ) = record.split()
     except ValueError:
         raise ValueError("FEN record must contain six fields, each separated by a space.")
     # 1. Piece Data
     # describes each rank (from 8 to 1), with a '/' separating ranks:
-    ranks = (piece_data.split("/"))
+    ranks = piece_data.split("/")
     if len(ranks) != 8:
         raise ValueError("FEN piece data should contain eight ranks, each separated by a '/'.")
     ranks.reverse()
@@ -50,7 +52,7 @@ def parse_fen(record: str) -> tuple[list[list[int]], list[list[int]], int, int, 
             else:
                 color = square.isupper()
                 try:
-                    board[-1].append(color * PIECE_LETTERS[square.upper()])
+                    board[-1].append(color * mappings.PIECE_LETTERS[square.upper()])
                 except KeyError:
                     raise ValueError(f"Piece notation {square} is unknown.")
         if len(board[-1]) != 8:
@@ -86,11 +88,9 @@ def parse_fen(record: str) -> tuple[list[list[int]], list[list[int]], int, int, 
         enpassant_file = -1
     else:
         try:
-            enpassant_file = FILES[enpassant_square[0]]
+            enpassant_file = mappings.FILES[enpassant_square[0]]
         except KeyError:
-            raise ValueError(
-                f"En passant target square not recognized; got {enpassant_square}"
-            )
+            raise ValueError(f"En passant target square not recognized; got {enpassant_square}")
     # 5. Halfmove clock
     # number of halfmoves since the last capture or pawn advance, used for the fifty-move rule.
     if isinstance(halfmove_clock, int) and (0 <= halfmove_clock <= 100):
