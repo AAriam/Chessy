@@ -184,10 +184,10 @@ class ArrayJudge(Judge):
             self.is_draw = True
             self._valid_moves = []
         else:
-            cheking_squares = self.squares_checking()
-            if cheking_squares.size != 0:
+            checking_squares = self.squares_checking()
+            if checking_squares.size != 0:
                 self.is_check = True
-                valid_moves = self.generate_valid_moves_checked(attacking_squares=cheking_squares)
+                valid_moves = self.generate_valid_moves_checked(attacking_squares=checking_squares)
                 if not valid_moves:
                     self.is_checkmate = True
             else:
