@@ -36,9 +36,6 @@ class ArrayJudge(Judge):
 
     MOVE_VECTORS_PIECE = {
         1: np.array([[1, 0], [2, 0], [1, 1], [1, -1]], dtype=np.int8),
-        11: np.array([[1, 0]], dtype=np.int8),  # Pawn vertical advance
-        12: np.array([[2, 0]], dtype=np.int8),  # Pawm double vertical advance
-        13: np.array([[1, 1], [1, -1]], dtype=np.int8),  # Pawn attacks
         2: np.array(  # Knight moves
             [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
         ),
@@ -49,8 +46,6 @@ class ArrayJudge(Judge):
             [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1], [0, -2], [0, 2]],
             dtype=np.int8
         ),
-        61: DIRECTION_UNIT_VECTORS,  # King normal moves
-        62: np.array([[0, -2], [0, 2]], dtype=np.int8),  # King castling moves
     }
     # Squares that must be empty for each player for castling to be allowed. First three squares
     # correspond to queenside castle, and the next two correspond to kingside castle.
