@@ -3,14 +3,15 @@ Array-based judge and move-generator.
 """
 
 # Standard library
-from typing import Optional, Sequence, NamedTuple, Any, NoReturn, Union, Tuple
+from __future__ import annotations
+from typing import Optional, Sequence, NoReturn, Union, Tuple, Iterable
 
 # 3rd party
 import numpy as np
 
 # Self
 from .abc import Judge, IllegalMoveError, GameOverError
-from ..board_representation import BoardState, Move, COLOR, PIECE
+from ..board_representation import BoardState, Move, Moves, COLOR, PIECE
 
 
 class ArrayJudge(Judge):
@@ -26,7 +27,6 @@ class ArrayJudge(Judge):
         gives the castling list of current player
     """
 
-    # Directions: top, bottom, right, left, top-right, top-left, bottom-right, bottom-left
     DIRECTION_UNIT_VECTORS = np.array(
         [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
     )
@@ -36,26 +36,25 @@ class ArrayJudge(Judge):
 
     MOVE_VECTORS_PIECE = {
         1: np.array([[1, 0], [2, 0], [1, 1], [1, -1]], dtype=np.int8),
-        2: np.array(  # Knight moves
+        2: np.array(
             [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
         ),
         3: UNIT_VECTORS_DIAG,
         4: UNIT_VECTORS_ORTHO,
         5: np.concatenate([UNIT_VECTORS_ORTHO, UNIT_VECTORS_DIAG]),
-        6: np.array(
-            [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1], [0, -2], [0, 2]],
-            dtype=np.int8
-        ),
+        6: np.concatentate([DIRECTION_UNIT_VECTORS, np.array([[0, -2], [0, 2]], dtype=np.int8)]),
     }
     # Squares that must be empty for each player for castling to be allowed. First three squares
     # correspond to queenside castle, and the next two correspond to kingside castle.
     CASTLING_SQUARES_EMPTY = {
         1: np.array([[0, 1], [0, 2], [0, 3], [0, 5], [0, 6]], dtype=np.int8),
-        -1: np.array([[7, 1], [7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8)
+        -1: np.array([[7, 1], [7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8),
     }
+    # Squares that must not be under attack for castling to be allowed for each player.
+    # First two squares correspond to queenside castle, and the next two to kingside castle.
     CASTLING_SQUARES_CHECK = {
         1: np.array([[0, 2], [0, 3], [0, 5], [0, 6]], dtype=np.int8),
-        -1: np.array([[7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8)
+        -1: np.array([[7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8),
     }
 
     def __init__(
@@ -182,10 +181,10 @@ class ArrayJudge(Judge):
             self.is_draw = True
             self._valid_moves = []
         else:
-            checking_squares = self.squares_checking()
+            checking_squares = self.squares_leading_to()
             if checking_squares.size != 0:
                 self.is_check = True
-                valid_moves = self.generate_valid_moves_checked(attacking_squares=checking_squares)
+                valid_moves = self.generate_valid_moves_checked(ss_checking_king=checking_squares)
                 if not valid_moves:
                     self.is_checkmate = True
             else:
