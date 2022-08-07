@@ -79,23 +79,31 @@ class Move(NamedTuple):
     """
     A data structure representing a move in the game.
 
-    start_square : numpy.ndarray
+    s0 : numpy.ndarray[shape=(2, ), dtype=numpy.int8]
         Row and column index of the start square (both from 0 to 7), respectively.
-    end_square : Sequence[int, int]
+        For example, [1, 0] is the square 2a.
+    s1 : numpy.ndarray[shape=(2, ), dtype=numpy.int8]
         Row and column index of the end square (both from 0 to 7), respectively.
-    promote_to : Optional[int]
-        Piece number to promote a pawn into, when the move is a promotion.
+    p : numpy.int8
+        Piece-ID of the moving piece:
+        1 = pawn, 2 = knight, 3 = bishop, 4 = rook, 5 = queen, 6 = king
+        White pieces are denoted with positive integers, while black pieces have the
+        same magnitude but with a negative sign (e.g. +6 = white king, –6 = black king).
+    pp : numpu.int8
+        Piece-ID of the promoted piece, if the move leads to a promotion, otherwise 0.
     """
 
     s0: np.ndarray
     s1: np.ndarray
-    p_promo: Optional[np.int8] = None
+    p: np.int8
+    pp: np.int8 = 0
 
     def __eq__(self, other):
         return (
             np.all(self.s0 == other.s0)
             and np.all(self.s1 == other.s1)
-            and self.p_promo == other.p_promo
+            and self.p == other.p
+            and self.pp == other.pp
         )
 
 
