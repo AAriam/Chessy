@@ -74,6 +74,9 @@ class ArrayJudge(Judge):
         self.enpassant_file: np.int8 = enpassant_file
         self.ply_count: np.int16 = ply_count
 
+        empty_array_squares = np.array([], dtype=np.int8).reshape(0, 2)
+        self._empty_move: tuple = (empty_array_squares, empty_array_squares)
+
         self.is_checkmate: bool = False
         self.is_check: bool = False
         self.is_draw: bool = False
@@ -302,7 +305,7 @@ class ArrayJudge(Judge):
         # neighbors and calculate move magnitudes, since the knight can jump.
         s0s = self.squares_of_piece(p=self.player * 2)
         if s0s.size == 0:
-            return []
+            return self._empty_move
         s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[2]
         mask_inboard = self.squares_are_inside_board(ss=s1s)
         s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
