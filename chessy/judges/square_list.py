@@ -373,12 +373,12 @@ class ArrayJudge(Judge):
     def king_wont_be_attacked(self, ss: np.ndarray):
         king_pos = tuple(self.pos_king)
         self.board[king_pos] = 0  # temporarily remove king from board
-        square_is_not_attacked = [self.squares_checking(s=square).size == 0 for square in ss]
+        square_is_not_attacked = [self.squares_leading_to(s=square).size == 0 for square in ss]
         self.board[king_pos] = self.king  # put it back
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
     def squares_attacking(self, s: np.ndarray, p: Optional[np.int8] = None) -> np.ndarray:
-        squares_checking = self.squares_checking(s=s, p=p)
+        squares_checking = self.squares_leading_to(s=s, p=p)
         unpin_mask = []
         for square in squares_checking:
             move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=square, s1s=s)
@@ -387,8 +387,8 @@ class ArrayJudge(Judge):
             )
         return squares_checking[unpin_mask]
 
-    def squares_checking(
-        self, s: Optional[np.ndarray] = None, p: Optional[np.int8] = None
+    def squares_leading_to(
+        self, s: Optional[np.ndarray] = None, p: Optional[np.int8] = None, status: str = "checking"
     ) -> np.ndarray:
         """
         Coordinates of squares containing a given player's pieces that currently
@@ -406,7 +406,7 @@ class ArrayJudge(Judge):
             Defaults to the opponent of the current player.
         Returns
         -------
-        numpy.ndarray(shape=(n, 2), dtype=numpy.int8)]
+        numpy.ndarray[(shape=(n, 2), dtype=numpy.int8)]
             Coordinates of the 'checking' squares.
         """
         p = -self.player if p is None else p
@@ -419,33 +419,49 @@ class ArrayJudge(Judge):
         mask_knight = self.piece_in_squares(inboards) == p * 2
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get nearest neighbor in each direction
-        neighbors_pos = self.neighbor_squares_vectorized(ss=np.tile(s, 8).reshape(-1, 2), ds=self.DIRECTION_UNIT_VECTORS)
+        neighbors_pos = self.neighbor_squares_vectorized(
+            ss=np.tile(s, 8).reshape(-1, 2), ds=self.DIRECTION_UNIT_VECTORS * p
+        )
         neighbors = self.piece_in_squares(neighbors_pos)
         # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
         opp_pieces = p * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
-        mask_king = neighbors == opp_pieces[6]
+        # mask_king = (neighbors == opp_pieces[6]) & (np.abs(neighbors_pos - s).max(axis=1) == 1)
         mask_queen = neighbors == opp_pieces[5]
         mask_rook = neighbors[::2] == opp_pieces[4]
         mask_bishop = neighbors[1::2] == opp_pieces[3]
-        mask_pawn = neighbors[1::2] == opp_pieces[1]
-        if np.any(mask_pawn):
-            dist_vecs = neighbors_pos[1::2] - s
-            mask_pawn &= (dist_vecs[:, 0] == -p)
-        if np.any(mask_king):
-            dist_vecs = neighbors_pos - s
-            mask_king &= (np.abs(dist_vecs).max(axis=1) == 1)
-        checking_squares = np.concatenate(
+
+        if status != "advancing":
+            pawn_dirs = [3, 5]
+            mask_pawn_right_distance = (neighbors_pos[pawn_dirs] - s)[:, 0] == -p
+        else:
+            pawn_dirs = 4
+            dir_mag_vertical = (neighbors_pos[pawn_dirs] - s)[0]
+            mask_pawn_right_distance = (dir_mag_vertical == -p) | (
+                (dir_mag_vertical == -p * 2)
+                & (neighbors_pos[pawn_dirs, 0] == (0 if p == 1 else 6))
+            )
+        mask_pawn_right_direction = neighbors[pawn_dirs] == opp_pieces[1]
+        mask_pawn = mask_pawn_right_direction & mask_pawn_right_distance
+
+        leading_squares = np.concatenate(
             [
                 inboards[mask_knight],
-                neighbors_pos[mask_king],
+                # neighbors_pos[mask_king],
                 neighbors_pos[mask_queen],
                 neighbors_pos[::2][mask_rook],
                 neighbors_pos[1::2][mask_bishop],
-                neighbors_pos[1::2][mask_pawn],
+                neighbors_pos[pawn_dirs][mask_pawn],
             ]
         )
-        return checking_squares
+
+        if status != "checking":
+            mask_absolute_pin = self.mask_unpinned_absolute_vectorized(
+                s0s=leading_squares, s1s=np.tile(s, leading_squares.size // 2).reshape(-1, 2)
+            )
+            leading_squares = leading_squares[mask_absolute_pin]
+
+        return leading_squares
 
     def mask_unpinned_absolute_vectorized(self, s0s, s1s):
         current_unpin_mask = np.zeros(s0s.size // 2, dtype=np.bool_)
