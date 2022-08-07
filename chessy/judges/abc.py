@@ -18,19 +18,15 @@ class Judge(ABC):
     """ """
 
     @abstractmethod
-    def __init__(self):
-        ...
-
-    @classmethod
-    @abstractmethod
-    def load_state(cls, state: BoardState) -> Judge:
+    def __init__(self, initial_state: BoardState):
         """
         Instantiate a new Judge for a given board state.
         """
         ...
 
+    @property
     @abstractmethod
-    def reveal_current_state(self) -> BoardState:
+    def current_state(self) -> BoardState:
         """
         Generate a BoardState representation for current internal state.
         """

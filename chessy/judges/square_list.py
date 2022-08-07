@@ -57,21 +57,13 @@ class ArrayJudge(Judge):
         -1: np.array([[7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8),
     }
 
-    def __init__(
-        self,
-        board: np.ndarray,
-        castling_rights: np.ndarray,
-        player: np.int8,
-        enpassant_file: np.int8,
-        fifty_move_count: np.int8,
-        ply_count: np.int16,
-    ):
-        self.board: np.ndarray = board
-        self.castling_rights: np.ndarray = castling_rights
-        self.player: np.int8 = player
-        self.fifty_move_count: np.int8 = fifty_move_count
-        self.enpassant_file: np.int8 = enpassant_file
-        self.ply_count: np.int16 = ply_count
+    def __init__(self, initial_state: BoardState):
+        self.board: np.ndarray = initial_state.board
+        self.castling_rights: np.ndarray = np.pad(initial_state.castling_rights, (1, 0))
+        self.player: np.int8 = initial_state.player
+        self.fifty_move_count: np.int8 = initial_state.fifty_move_count
+        self.enpassant_file: np.int8 = initial_state.enpassant_file
+        self.ply_count: np.int16 = initial_state.ply_count
 
         empty_array_squares = np.array([], dtype=np.int8).reshape(0, 2)
         self._empty_move: tuple = (empty_array_squares, empty_array_squares)
@@ -83,18 +75,8 @@ class ArrayJudge(Judge):
         self.analyze_state()
         return
 
-    @classmethod
-    def load_state(cls, state: BoardState) -> Judge:
-        return cls(
-            board=state.board,
-            castling_rights=np.pad(state.castling_rights, (1, 0)),
-            player=state.player,
-            enpassant_file=state.enpassant_file,
-            fifty_move_count=state.fifty_move_count,
-            ply_count=state.ply_count,
-        )
-
-    def reveal_current_state(self) -> BoardState:
+    @property
+    def current_state(self) -> BoardState:
         return BoardState(
             board=self.board,
             castling_rights=self.castling_rights[1:, 1:],
