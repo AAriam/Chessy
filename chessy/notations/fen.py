@@ -1,8 +1,10 @@
+import numpy as np
+
 from ..board_representation import BoardState
 from . import mappings
 
 
-def fen_to_boardstate(record: str) -> BoardState:
+def to_boardstate(record: str) -> BoardState:
     """
     Parse a Forsyth–Edwards Notation (FEN) record to transform the data into a format accepted
     by the class `boards.abc.Chessboard`.
@@ -48,9 +50,9 @@ def fen_to_boardstate(record: str) -> BoardState:
         board.append([])
         for square in rank:
             if square.isnumeric():
-                board[-1].append([0] * int(square))
+                board[-1].extend([0] * int(square))
             else:
-                color = square.isupper()
+                color = 1 if square.isupper() else -1
                 try:
                     board[-1].append(color * mappings.PIECE_LETTERS[square.upper()])
                 except KeyError:
@@ -85,29 +87,40 @@ def fen_to_boardstate(record: str) -> BoardState:
     # If there is no en passant target square, this field uses the character "-".
     # This is recorded regardless of whether there is a pawn in position to capture en passant.
     if enpassant_square == "-":
-        enpassant_file = -1
+        enpassant_file = np.int8(-1)
     else:
         try:
-            enpassant_file = mappings.FILES[enpassant_square[0]]
+            enpassant_file = np.int8(mappings.FILES[enpassant_square[0]])
         except KeyError:
             raise ValueError(f"En passant target square not recognized; got {enpassant_square}")
     # 5. Halfmove clock
     # number of halfmoves since the last capture or pawn advance, used for the fifty-move rule.
-    if isinstance(halfmove_clock, int) and (0 <= halfmove_clock <= 100):
+    try:
+        halfmove_clock = np.int8(halfmove_clock)
+    except ValueError:
+        raise ValueError(f"Halfmove clock must be an integer; got {halfmove_clock}.")
+    if 0 <= halfmove_clock <= 100:
         fifty_move_count = halfmove_clock
     else:
-        raise ValueError(
-            f"Halfmove clock must be an integer between 0 and 50; got {halfmove_clock}."
-        )
+        raise ValueError(f"Halfmove clock must be between 0 and 50; got {halfmove_clock}.")
     # 6. Fullmove number
     # The number of the full moves. It starts at 1 and is incremented after Black's move.
     # According to
     #   Bonsdorff et al., Schach und Zahl. Unterhaltsame Schachmathematik. pp. 11–13,
     # the longest-possible game lasts 5899 moves (i.e. 11798 plies).
-    if isinstance(fullmove_num, int) and (1 <= halfmove_clock <= 5899):
+    try:
+        fullmove_num = np.int8(fullmove_num)
+    except ValueError:
+        raise ValueError(f"Fullmove number must be an integer; got {fullmove_num}.")
+    if 1 <= fullmove_num <= 5899:
         ply_count = (fullmove_num - 1) * 2 + (1 if turn == -1 else 0)
     else:
-        raise ValueError(
-            f"Fullmove number must be an integer between 1 and 5899; got {fullmove_num}."
-        )
-    return board, castling_stats, turn, fifty_move_count, enpassant_file, ply_count
+        raise ValueError(f"Fullmove number must be between 1 and 5899; got {fullmove_num}.")
+    return BoardState(
+        board=np.array(board, dtype=np.int8),
+        castling_rights=np.array(castling_stats, dtype=np.bool_),
+        player=np.int8(turn),
+        enpassant_file=np.int8(enpassant_file),
+        fifty_move_count=np.int8(fifty_move_count),
+        ply_count=np.int16(ply_count),
+    )
