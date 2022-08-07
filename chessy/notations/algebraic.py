@@ -1,9 +1,8 @@
-
 def read(notation: str):
     game = [entry.split(".")[-1] for entry in notation.split()]
     for idx, move in enumerate(game):
-        piece=None
-        column=None
+        piece = None
+        column = None
         turn = (-1) ** idx
         if move == "0-0":
             pass
@@ -14,6 +13,3 @@ def read(notation: str):
         else:
             column = FILES[move[0]]
         print(f"{idx}: ({turn}) ")
-
-
-
