@@ -107,6 +107,19 @@ class Move(NamedTuple):
         )
 
 
+class Moves(NamedTuple):
+
+    s0s: np.ndarray
+    s1s: np.ndarray
+    ps: np.ndarray
+    pps: np.ndarray
+
+    def to_move_list(self):
+        return [
+            Move(s0, s1, p, pp) for s0, s1, p, pp in zip(self.s0s, self.s1s, self.ps, self.pps)
+        ]
+
+
 class Color(NamedTuple):
     name: str
     letter: str
