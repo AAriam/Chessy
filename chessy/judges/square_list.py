@@ -42,7 +42,7 @@ class ArrayJudge(Judge):
         3: UNIT_VECTORS_DIAG,
         4: UNIT_VECTORS_ORTHO,
         5: np.concatenate([UNIT_VECTORS_ORTHO, UNIT_VECTORS_DIAG]),
-        6: np.concatentate([DIRECTION_UNIT_VECTORS, np.array([[0, -2], [0, 2]], dtype=np.int8)]),
+        6: np.concatenate([DIRECTION_UNIT_VECTORS, np.array([[0, -2], [0, 2]], dtype=np.int8)]),
     }
     # Squares that must be empty for each player for castling to be allowed. First three squares
     # correspond to queenside castle, and the next two correspond to kingside castle.
