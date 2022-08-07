@@ -289,7 +289,17 @@ class ArrayJudge(Judge):
         s1s_valid = (s0s_valid + valid_moves_).reshape(-1, 2)
         return s0s_valid, s1s_valid
 
-    def generate_knight_moves(self):
+    def generate_knight_moves(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Generate valid moves for knights of the current player in the current state.
+
+        Returns
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            Start- and end-squares of all valid moves.
+        """
+        # The procedure is similar to the one for big pieces, but here we don't have to check for
+        # neighbors and calculate move magnitudes, since the knight can jump.
         s0s = self.squares_of_piece(p=self.player * 2)
         if s0s.size == 0:
             return []
@@ -299,17 +309,16 @@ class ArrayJudge(Judge):
         s1s_valid = s1s[mask_inboard]
         mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
         if not np.any(mask_vacant):
-            return []
-        mask_unpinned = self.mask_unpinned_absolute_vectorized(s0s=s0s_valid[mask_vacant], s1s=s1s_valid[mask_vacant])
-        is_promotion = np.zeros(shape=np.count_nonzero(mask_unpinned), dtype=np.bool_)
-        return self.generate_move_objects(
-            s0s=s0s_valid[mask_vacant][mask_unpinned],
-            s1s=s1s_valid[mask_vacant][mask_unpinned], is_promotion=is_promotion)
+            return self._empty_move
+        mask_unpinned = self.mask_unpinned_absolute_vectorized(
+            s0s=s0s_valid[mask_vacant], s1s=s1s_valid[mask_vacant]
+        )
+        return s0s_valid[mask_vacant][mask_unpinned], s1s_valid[mask_vacant][mask_unpinned]
 
-    def generate_pawn_moves(self):
+    def generate_pawn_moves(self) -> tuple[np.ndarray, np.ndarray]:
         s0s = self.squares_of_piece(p=self.player)
         if s0s.size == 0:
-            return []
+            return self._empty_move
         s1s_all = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[1] * self.player
         s1s_forward, s1s_attack = s1s_all[:, :2], s1s_all[:, 2:]
         s1s_single, s1s_double = s1s_forward[:, 0], s1s_forward[:, 1]
@@ -319,38 +328,43 @@ class ArrayJudge(Judge):
         running_mask[:, 0][running_mask[:, 0]] &= mask_vacant_forward1
         running_mask[:, 1][running_mask[:, 1]] &= mask_vacant_forward2
         if np.any(running_mask[:, 0]):
-            unpin_mask_forward = self.mask_unpinned_absolute_vectorized(s0s=s0s[running_mask[:, 0]], s1s=s1s_single[running_mask[:, 0]])
+            unpin_mask_forward = self.mask_unpinned_absolute_vectorized(
+                s0s=s0s[running_mask[:, 0]], s1s=s1s_single[running_mask[:, 0]]
+            )
             running_mask[:, 0][running_mask[:, 0]] &= unpin_mask_forward
             running_mask[:, 1] &= running_mask[:, 0]
             mask_in_initial_pos = s0s[..., 0] == (1 if self.player == 1 else 6)
             running_mask[:, 1] &= mask_in_initial_pos
         mask_can_attack = self.squares_belong_to_opponent(
-            ss=s1s_attack[running_mask[:, 2:]]) | self.is_enpassant_square(ss=s1s_attack[running_mask[:, 2:]])
+            ss=s1s_attack[running_mask[:, 2:]]
+        ) | self.is_enpassant_square(ss=s1s_attack[running_mask[:, 2:]])
         running_mask[:, 2:][running_mask[:, 2:]] &= mask_can_attack
         if np.any(running_mask[:, 2]):
             unpin_mask_attack1 = self.mask_unpinned_absolute_vectorized(
-                s0s=s0s[running_mask[:, 2]],
-                s1s=s1s_attack[:, 0][running_mask[:, 2]]
+                s0s=s0s[running_mask[:, 2]], s1s=s1s_attack[:, 0][running_mask[:, 2]]
             )
             running_mask[:, 2][running_mask[:, 2]] &= unpin_mask_attack1
         if np.any(running_mask[:, 3]):
             unpin_mask_attack2 = self.mask_unpinned_absolute_vectorized(
-                s0s=s0s[running_mask[:, 3]],
-                s1s=s1s_attack[:, 1][running_mask[:, 3]]
+                s0s=s0s[running_mask[:, 3]], s1s=s1s_attack[:, 1][running_mask[:, 3]]
             )
             running_mask[:, 3][running_mask[:, 3]] &= unpin_mask_attack2
         if not np.any(running_mask):
-            return []
-        is_promotion = s1s_all[running_mask][..., 0] == (7 if self.player == 1 else 0)
-        return self.generate_move_objects(s0s=np.repeat(s0s, np.count_nonzero(running_mask, axis=1), axis=0), s1s=s1s_all[running_mask], is_promotion=is_promotion)
+            return self._empty_move
+        return (
+            np.repeat(s0s, np.count_nonzero(running_mask, axis=1), axis=0),
+            s1s_all[running_mask],
+        )
 
-    def generate_king_moves(self):
+    def generate_king_moves(self) -> tuple[np.ndarray, np.ndarray]:
         s1s_all = self.pos_king + self.MOVE_VECTORS_PIECE[6]
         s1s_normal, castle_s1s = s1s_all[:-2], s1s_all[-2:]
         s1s_inboard = s1s_normal[ArrayJudge.squares_are_inside_board(ss=s1s_normal)]
         s1s_vacant = s1s_inboard[~self.squares_belong_to_player(ss=s1s_inboard)]
         s1s_final = s1s_vacant[self.king_wont_be_attacked(ss=s1s_vacant)]
-        if not self.is_check and np.any(self.castling_rights[self.player]):
+        if not self.is_check and np.any(
+            self.castling_rights[self.player]
+        ):  # TODO: Check the ordering of kingside/queenside castles
             vacant = self.squares_are_empty(ss=self.CASTLING_SQUARES_EMPTY[self.player])
             mask_vacant = [np.all(vacant[:3]), np.all(vacant[3:])]
             not_checked = self.king_wont_be_attacked(ss=self.CASTLING_SQUARES_CHECK[self.player])
@@ -358,7 +372,7 @@ class ArrayJudge(Judge):
             mask_castle = mask_vacant & mask_not_checked & self.castling_rights[self.player][1:]
             s1s_final_castle = castle_s1s[mask_castle]
             s1s_final = np.concatenate((s1s_final.reshape(-1, 2), s1s_final_castle.reshape(-1, 2)))
-        return [Move(s0=self.pos_king, s1=s1) for s1 in s1s_final]
+        return np.tile(self.pos_king, s1s_final.shape[0]).reshape(-1, 2), s1s_final
 
     def generate_valid_moves_checked(self, attacking_squares: np.ndarray):
         # Get the squares the king can move into to resolve check.
