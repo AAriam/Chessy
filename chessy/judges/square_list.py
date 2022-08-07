@@ -665,7 +665,10 @@ class ArrayJudge(Judge):
         Union[np.ndarray, np.int8]
             Piece types as a single integer (when `ss` is 1-dimensional) or a 1d-array of size n.
         """
-        return self.board[ss[..., 0], ss[..., 1]]
+        if ss.size // 2 != 0:
+            return self.board[ss[..., 0], ss[..., 1]]
+        else:
+            return np.array([], dtype=np.int8)
 
     def squares_of_piece(self, p: int):
         return np.argwhere(self.board == p)
