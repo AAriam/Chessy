@@ -209,77 +209,68 @@ class ArrayJudge(Judge):
         list[Optional[Move]]
             A list of `Move` objects, or an empty list, if no valid move exists.
         """
-        valid_moves = []  # Initialize output list
-        for p in np.array([3, 4, 5], dtype=np.int8):  # Iterate over bishop, rook, queen.
-            s0s = self.squares_of_piece(p=p * self.player)  # Get the start-squares.
-            # For each start-square, go one square in every direction that piece can move in.
-            s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[p]
-            # Get the end squares that are still in-board, to eliminate searching in
-            # directions leaving the board (when piece is on one or two edges).
-            mask_inboard = self.squares_are_inside_board(ss=s1s)
-            s1s_valid = s1s[mask_inboard]
-            # Repeat each start square as many times as the number of remaining directions from
-            # that square, to get an array of start-squares corresponding one-to-one with the
-            # array of end-squares.
-            s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
-            if s1s_valid.size == 0:  # If no direction is remained, go to next piece.
-                continue
-            # From the remaining end-squares, get those that are vacant
-            # (i.e. empty or occupied by opponent), to avoid searching in dead-end directions.
-            mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
-            if not np.any(mask_vacant):  # If no direction is remained, go to next piece.
-                continue
-            # From the remaining end-squares, get those in directions
-            # that don't break an absolute pin.
-            mask_unpinned = self.mask_unpinned_absolute_vectorized(
-                s0s=s0s_valid[mask_vacant], s1s=s1s_valid[mask_vacant]
-            )
-            if not np.any(mask_unpinned):  # If no direction is remained, go to next piece.
-                continue
-            # Filter the arrays of start-squares and end-squares, based on above masks
-            s0s_valid = s0s_valid[mask_vacant][mask_unpinned]
-            s1s_valid = s1s_valid[mask_vacant][mask_unpinned]
-            # Calculate back the remaining valid directions
-            ds_valid = s1s_valid - s0s_valid
-            # Get the coordinates of all neighbors of all remaining start-squares
-            neighbors_pos = self.neighbor_squares_vectorized(
-                ss=s0s_valid,
-                ds=ds_valid
-            )
-            # Get the pieces on those squares
-            neighbor_pieces = self.piece_in_squares(neighbors_pos)
-            # Create a shift array (elements 0 or 1) to account for neighbors that belong to the
-            # player (and thus cannot be moved into), vs. neighbors that are empty or belong to
-            # the opponent (and thus can be moved into).
-            shift_for_own_piece = self.pieces_belong_to_player(ps=neighbor_pieces)
-            # Calculate the maximum allowed magnitude of move for every direction, based on the
-            # coordinates of the neighbor in that direction, and using the shift array.
-            move_mag_restricted = (
-                    np.abs(neighbors_pos - s0s_valid).max(axis=-1) - shift_for_own_piece
-            )
-            # Get magnitudes greater than zero (i.e. a move in that direction is possible)
-            mask_valid_moves = move_mag_restricted > 0
-            if not np.any(mask_valid_moves):  # If no direction is remained, go to next piece.
-                continue
-            valid_move_mags = move_mag_restricted[mask_valid_moves]
-            valid_move_dirs = ds_valid[mask_valid_moves]
-            # For each direction, generate as many possible move-vectors in that direction, e.g.
-            # if move direction is (1,1) and max. magnitude is 3, generate [(1, 1), (2, 2), (3, 3)]
-            valid_moves_ = [
-                d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)
-                for mag, d in zip(valid_move_mags, valid_move_dirs)
-            ]
-            valid_moves_ = np.concatenate(valid_moves_, dtype=np.int8)
-            # Again, repeat each remaining start-square as many times as the max. magnitude of the
-            # move in that direction.
-            s0s_valid = np.repeat(s0s_valid[mask_valid_moves], valid_move_mags, axis=0)
-            # Add each start-square to its corresponding move-vector to get the actual end-squares.
-            s1s_valid = (s0s_valid + valid_moves_).reshape(-1, 2)
-            is_promotion = np.zeros(shape=valid_move_mags.sum(), dtype=np.bool_)  # No promotion
-            valid_moves.extend(
-                self.generate_move_objects(s0s=s0s_valid, s1s=s1s_valid, is_promotion=is_promotion)
-            )
-        return valid_moves
+        s0s = self.squares_of_piece(p=p * self.player)  # Get the start-squares.
+        if s0s.size == 0:  # If no piece of that kind is on board, continue to next piece.
+            return self._empty_move
+        # For each start-square, go one square in every direction that piece can move in.
+        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[p]
+        # Get the end squares that are still in-board, to eliminate searching in
+        # directions leaving the board (when piece is on one or two edges).
+        mask_inboard = self.squares_are_inside_board(ss=s1s)
+        s1s_valid = s1s[mask_inboard]
+        # Repeat each start square as many times as the number of remaining directions from
+        # that square, to get an array of start-squares corresponding one-to-one with the
+        # array of end-squares.
+        s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
+        if s1s_valid.size == 0:  # If no direction is remained, go to next piece.
+            return self._empty_move
+        # From the remaining end-squares, get those that are vacant
+        # (i.e. empty or occupied by opponent), to avoid searching in dead-end directions.
+        mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
+        if not np.any(mask_vacant):  # If no direction is remained, go to next piece.
+            return self._empty_move
+        # From the remaining end-squares, get those in directions
+        # that don't break an absolute pin.
+        mask_unpinned = self.mask_unpinned_absolute_vectorized(
+            s0s=s0s_valid[mask_vacant], s1s=s1s_valid[mask_vacant]
+        )
+        if not np.any(mask_unpinned):  # If no direction is remained, go to next piece.
+            return self._empty_move
+        # Filter the arrays of start-squares and end-squares, based on above masks
+        s0s_valid = s0s_valid[mask_vacant][mask_unpinned]
+        s1s_valid = s1s_valid[mask_vacant][mask_unpinned]
+        # Calculate back the remaining valid directions
+        ds_valid = s1s_valid - s0s_valid
+        # Get the coordinates of all neighbors of all remaining start-squares
+        neighbors_pos = self.neighbor_squares_vectorized(ss=s0s_valid, ds=ds_valid)
+        # Get the pieces on those squares
+        neighbor_pieces = self.piece_in_squares(neighbors_pos)
+        # Create a shift array (elements 0 or 1) to account for neighbors that belong to the
+        # player (and thus cannot be moved into), vs. neighbors that are empty or belong to
+        # the opponent (and thus can be moved into).
+        shift_for_own_piece = self.pieces_belong_to_player(ps=neighbor_pieces)
+        # Calculate the maximum allowed magnitude of move for every direction, based on the
+        # coordinates of the neighbor in that direction, and using the shift array.
+        move_mag_restricted = np.abs(neighbors_pos - s0s_valid).max(axis=-1) - shift_for_own_piece
+        # Get magnitudes greater than zero (i.e. a move in that direction is possible)
+        mask_valid_moves = move_mag_restricted > 0
+        if not np.any(mask_valid_moves):  # If no direction is remained, go to next piece.
+            return self._empty_move
+        valid_move_mags = move_mag_restricted[mask_valid_moves]
+        valid_move_dirs = ds_valid[mask_valid_moves]
+        # For each direction, generate as many possible move-vectors in that direction, e.g.
+        # if move direction is (1,1) and max. magnitude is 3, generate [(1, 1), (2, 2), (3, 3)]
+        valid_moves_ = [
+            d * np.expand_dims(np.arange(1, mag + 1, dtype=np.int8), 1)
+            for mag, d in zip(valid_move_mags, valid_move_dirs)
+        ]
+        valid_moves_ = np.concatenate(valid_moves_, dtype=np.int8)
+        # Again, repeat each remaining start-square as many times as the max. magnitude of the
+        # move in that direction.
+        s0s_valid = np.repeat(s0s_valid[mask_valid_moves], valid_move_mags, axis=0)
+        # Add each start-square to its corresponding move-vector to get the actual end-squares.
+        s1s_valid = (s0s_valid + valid_moves_).reshape(-1, 2)
+        return s0s_valid, s1s_valid
 
     def generate_knight_moves(self):
         s0s = self.squares_of_piece(p=self.player * 2)
