@@ -192,17 +192,34 @@ class ArrayJudge(Judge):
             self._valid_moves = valid_moves
         return
 
-    def generate_valid_moves_unchecked(self) -> list[Move]:
-        valid_moves = self.generate_pawn_moves()
-        valid_moves.extend(self.generate_king_moves())
-        valid_moves.extend(self.generate_knight_moves())
-        valid_moves.extend(self.generate_big_piece_moves())
-        return valid_moves
+    def generate_valid_moves_unchecked(self) -> list[Optional[Move]]:
+        """
+        Generate all the valid moves for the current player in the current state,
+        knowing that the player is not in check.
 
-    def generate_big_piece_moves(self) -> list[Optional[Move]]:
+        Returns
+        -------
+        list[Optional[Move]]
+            A list of `Move` objects, or an empty list, if no valid move exists, in which case
+            (knowing the player is not in check) it means the game is a draw due to stalemate.
+        """
+        moves = [
+            self.generate_pawn_moves(),
+            self.generate_knight_moves(),
+            self.generate_big_piece_moves(p=3),
+            self.generate_big_piece_moves(p=4),
+            self.generate_big_piece_moves(p=5),
+            self.generate_king_moves(),
+        ]
+        move_objs = []
+        for moves, p in zip(moves, np.arange(1, 7, dtype=np.int8) * self.player):
+            move_objs.extend(self.generate_move_objects(s0s=moves[0], s1s=moves[1], ps=p))
+        return move_objs
+
+    def generate_big_piece_moves(self, p: int) -> tuple[np.ndarray, np.ndarray]:
         """
         Generate valid moves for queens, rooks and bishops
-        of the current player in current state.
+        of the current player in the current state.
 
         Returns
         -------
