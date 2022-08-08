@@ -180,7 +180,7 @@ class ArrayJudge(Judge):
             self._valid_moves = valid_moves
         return
 
-    def generate_valid_moves_unchecked(self) -> list[Optional[Move]]:
+    def generate_valid_moves_unchecked(self) -> Moves:
         """
         Generate all the valid moves for the current player in the current state,
         knowing that the player is not in check.
@@ -191,18 +191,18 @@ class ArrayJudge(Judge):
             A list of `Move` objects, or an empty list, if no valid move exists, in which case
             (knowing the player is not in check) it means the game is a draw due to stalemate.
         """
-        moves = [
-            self.generate_pawn_moves(),
-            self.generate_knight_moves(),
-            self.generate_big_piece_moves(p=3),
-            self.generate_big_piece_moves(p=4),
-            self.generate_big_piece_moves(p=5),
-            self.generate_king_moves(),
-        ]
-        move_objs = []
-        for moves, p in zip(moves, np.arange(1, 7, dtype=np.int8) * self.player):
-            move_objs.extend(self.generate_move_objects(s0s=moves[0], s1s=moves[1], ps=p))
-        return move_objs
+        s0s_p, s1s_p, pps = self.generate_pawn_moves()
+        s0s_n, s1s_n = self.generate_knight_moves()
+        s0s_b, s1s_b = self.generate_big_piece_moves(p=3)
+        s0s_r, s1s_r = self.generate_big_piece_moves(p=4)
+        s0s_q, s1s_q = self.generate_big_piece_moves(p=5)
+        s0s_k, s1s_k = self.generate_king_moves()
+        s0s = [s0s_p, s0s_n, s0s_b, s0s_r, s0s_q, s0s_k]
+        s1s = [s1s_p, s1s_n, s1s_b, s1s_r, s1s_q, s1s_k]
+        move_counts = [s.shape[0] for s in s0s]
+        ps = np.repeat(np.array([1, 2, 3, 4, 5, 6], dtype=np.int8), move_counts)
+        pps = np.concatenate(pps, np.zeros(sum(move_counts[1:]), dtype=np.int8))
+        return Moves(s0s=np.concatenate(s0s), s1s=np.concatenate(s1s), ps=ps, pps=pps)
 
     def generate_big_piece_moves(self, p: int) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -303,7 +303,8 @@ class ArrayJudge(Judge):
         )
         return s0s_valid[mask_vacant][mask_unpinned], s1s_valid[mask_vacant][mask_unpinned]
 
-    def generate_pawn_moves(self) -> tuple[np.ndarray, np.ndarray]:
+    def generate_pawn_moves(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        # TODO: FIX ENPASSANTS LEADING TO CHECK ALONG A RANK
         s0s = self.squares_of_piece(p=self.player)
         if s0s.size == 0:
             return self._empty_move
