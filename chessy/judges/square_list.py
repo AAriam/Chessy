@@ -318,7 +318,7 @@ class ArrayJudge(Judge):
             )
             running_mask[:, 0][running_mask[:, 0]] &= unpin_mask_forward
             running_mask[:, 1] &= running_mask[:, 0]
-            mask_in_initial_pos = s0s[..., 0] == (1 if self.player == 1 else 6)
+            mask_in_initial_pos = self.mask_ss_non_p_rank(ss=s0s)
             running_mask[:, 1] &= mask_in_initial_pos
         mask_can_attack = self.squares_belong_to_opponent(
             ss=s1s_attack[running_mask[:, 2:]]
@@ -661,15 +661,12 @@ class ArrayJudge(Judge):
         move_dirs = np.array([[1, 0], [1, 1], [1, -1]], dtype=np.int8) * self.player
         return np.array(
             [
-                1 + self.pawn_not_yet_moved(s0),
+                1 + self.mask_ss_non_p_rank(s0),
                 self.pawn_can_capture_square(s0 + move_dirs[1]),
                 self.pawn_can_capture_square(s0 + move_dirs[2]),
             ],
             dtype=np.int8,
         )
-
-    def pawn_not_yet_moved(self, s0):
-        return s0[0] == (1 if self.player == 1 else 6)
 
     def is_enpassant_square(self, ss):
         return np.all(ss == [(5 if self.player == 1 else 2), self.enpassant_file], axis=-1)
@@ -768,6 +765,46 @@ class ArrayJudge(Judge):
     def king(self):
         return self.player * 6
 
+    def mask_ss_non_p_rank(self, ss: np.ndarray) -> np.ndarray:
+        """
+        Get a boolean mask array to select squares residing on the pawn-rank
+        of the current player (i.e. rank 2 for white, rank 7 for black).
+
+        Parameters
+        ----------
+        ss : numpy.ndarray[shape=(n, 2)]
+            Coordinates of the squares to be tested.
+
+        Returns
+        -------
+        numpy.ndarray[shape=(n, ), dtype=numpy.bool_]
+            A boolean array that can be used as a mask for the input array
+            (i.e. `ss[mask_ss_non_p_rank(ss)]`) to obtain the squares that are
+            on the pawn-rank of the current player. This can be used, e.g. to check which
+            pawns of the current player have not been moved yet.
+        """
+        return ss[..., 0] == self.PAWN_RANK[self.player]
+
+    def mask_ss_non_prom_rank(self, ss: np.ndarray) -> np.ndarray:
+        """
+        Get a boolean mask array to select squares residing on the promotion-rank
+        of the current player (i.e. rank 8 for white, rank 0 for black).
+
+        Parameters
+        ----------
+        ss : numpy.ndarray[shape=(n, 2)]
+            Coordinates of the squares to be tested.
+
+        Returns
+        -------
+        numpy.ndarray[shape=(n, ), dtype=numpy.bool_]
+            A boolean array that can be used as a mask for the input array
+            (i.e. `ss[mask_ss_non_p_rank(ss)]`) to obtain the squares that are
+            on the promotion-rank of the current player. This can be used, e.g. to find moves
+            leading to promotion.
+        """
+        return ss[..., 0] == self.PROMOTION_RANK[self.player]
+
     @property
     def move_is_promotion(self) -> bool:
         return
@@ -806,16 +843,19 @@ class ArrayJudge(Judge):
             an empty array of shape (0, 2) is returned.
         """
         move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=s0, s1s=s1)
-        in_between_squares = (
-            s0
-            + np.arange(
-                1,
-                move_vm if is_cardinal else 1,  # If not on a cardinal ray, make the range empty
-                dtype=np.int8,
-            )[:, np.newaxis]
-            * move_uv
-        )
-        return in_between_squares
+        if not is_cardinal:
+            return self.empty_array_squares
+        return s0 + np.arange(1, move_vm, dtype=np.int8)[:, np.newaxis] * move_uv
+
+    @staticmethod
+    def create_promotion_data(mask_no_promo: np.ndarray):
+        # Get 4 for promoting moves, and 1 for non-promoting moves
+        reps_for_promotion = mask_no_promo * 3 + 1
+        pps = []  # Create promotion array
+        for is_promotion in mask_no_promo:
+            pps.extend([2, 3, 4, 5] if is_promotion else [0])
+        pps = np.array(pps, dtype=np.int8)
+        return reps_for_promotion, pps
 
     @staticmethod
     def move_dir_mag(s0s: np.ndarray, s1s: np.ndarray) -> tuple:
