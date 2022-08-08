@@ -31,7 +31,7 @@ class ArrayJudge(Judge):
 
     def __init__(self, initial_state: BoardState):
         self.board: np.ndarray = initial_state.board.copy()
-        self.castling_rights: np.ndarray = np.pad(initial_state.castling_rights, (1, 0))
+        self.castling_rights: dict = initial_state.castling_rights.copy()
         self.player: np.int8 = initial_state.player
         self.fifty_move_count: np.int8 = initial_state.fifty_move_count
         self.enpassant_file: np.int8 = initial_state.enpassant_file
@@ -51,7 +51,7 @@ class ArrayJudge(Judge):
     def current_state(self) -> BoardState:
         return BoardState(
             board=self.board.copy(),
-            castling_rights=self.castling_rights[1:, 1:].copy(),
+            castling_rights=self.castling_rights.copy(),
             player=self.player,
             enpassant_file=self.enpassant_file,
             fifty_move_count=self.fifty_move_count,
@@ -113,15 +113,12 @@ class ArrayJudge(Judge):
             if moving_piece_type == KING:
                 self.castling_rights[self.player] = dict.fromkeys(self.castling_rights[self.player], False)
                 if move_vec_mag[1] == 2:
-                    rook_pos = (move.s1[0], 7 if move_vec[1] == 2 else 0)
-                    rook_end_pos = (move.s1[0], 5 if move_vec[1] == 2 else 3)
-                    self.board[rook_pos] = 0
-                    self.board[rook_end_pos] = 4 * self.player
-            elif moving_piece_type == P.R:
-                if move.s0[1] == 0:
-                    self.castling_rights[self.player, 1] = 0
-                elif move.s0[1] == 7:
-                    self.castling_rights[self.player, -1] = 0
+                    self.board[ROOK_S_INIT[self.player][move_vec[1]]] = 0
+                    self.board[ROOK_S_END[self.player][move_vec[1]]] = self.player * ROOK
+            elif moving_piece_type == ROOK:
+                for side, pos in ROOK_S_INIT[self.player].items():
+                    if np.all(move.s0 == pos):
+                        self.castling_rights[self.player][side] = False
         self.board[tuple(move.s1)] = piece_at_end_square
         self.board[tuple(move.s0)] = 0
         self.fifty_move_count += 1
@@ -326,15 +323,14 @@ class ArrayJudge(Judge):
         s1s_inboard = s1s_normal[ArrayJudge.squares_are_inside_board(ss=s1s_normal)]
         s1s_vacant = s1s_inboard[~self.squares_belong_to_player(ss=s1s_inboard)]
         s1s_final = s1s_vacant[self.king_wont_be_attacked(ss=s1s_vacant)]
-        if not self.is_check and np.any(
-            self.castling_rights[self.player]
-        ):  # TODO: Check the ordering of kingside/queenside castles
-            vacant = self.squares_are_empty(ss=self.CASTLING_SQUARES_EMPTY[self.player])
+        player_castling_rights = np.array(list(self.castling_rights[self.player].values()))
+        if not self.is_check and np.any(player_castling_rights):
+            vacant = self.squares_are_empty(ss=CASTLING_SS_EMPTY[self.player])
             mask_vacant = [np.all(vacant[:3]), np.all(vacant[3:])]
             not_checked = self.king_wont_be_attacked(ss=CASTLING_SS_CHECK[self.player])
             mask_not_checked = np.all(not_checked.reshape(2, 2), axis=1)
-            mask_castle = mask_vacant & mask_not_checked & self.castling_rights[self.player][1:]
-            s1s_final_castle = castle_s1s[mask_castle]
+            mask_castle = mask_vacant & mask_not_checked & player_castling_rights
+            s1s_final_castle = s1s_castle[mask_castle]
             s1s_final = np.concatenate((s1s_final.reshape(-1, 2), s1s_final_castle.reshape(-1, 2)))
         return np.tile(self.pos_king, reps=s1s_final.shape[0]).reshape(-1, 2), s1s_final
 
@@ -675,7 +671,7 @@ class ArrayJudge(Judge):
         side : int
             +1 for kingside, -1 for queenside.
         """
-        return self.castling_rights[self.player, side]
+        return self.castling_rights[self.player][side]
 
     def pieces_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
         """

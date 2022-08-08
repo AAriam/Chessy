@@ -25,12 +25,12 @@ class BoardState(NamedTuple):
         0 = empty, 1 = pawn, 2 = knight, 3 = bishop, 4 = rook, 5 = queen, 6 = king
         White pieces are denoted with positive integers, while black pieces have the
         same magnitude but with a negative sign (e.g. +6 = white king, –6 = black king).
-    castling_rights : dict[numpy.int8, numpy.ndarray(shape=(2,), dtype=numpy.int8)]
-        A 2-dimensional array representing castling availability for white and black, i.e. whether
-        either player is permanently disqualified to castle, both kingside and queenside.
-        Axis 0 (2nd. dimension) corresponds to kingside and queenside availability.
-        Axis 1 (1st. dimension) corresponds to white and black players.
-        Data is a boolean integer: either 1 (castling allowed) or 0 (not allowed).
+    castling_rights : dict[numpy.int8, numpy.ndarray(shape=(2,), dtype=numpy.bool_)]
+        A dictionary representing the castling availabilities, i.e. whether either player is
+        permanently disqualified to castle, for white (key: 1) and black (key: -1).
+        Each value is a 1-dimensional array, corresponding to queenside and kingside castles, in
+        that order (i.e. element 0: queenside, 1: kingside). Data is boolean:
+        True (castling allowed) or False (not allowed).
     player : numpy.int8
         Current player to move; +1 is white and -1 is black.
     enpassant_file : numpy.int8
@@ -44,13 +44,13 @@ class BoardState(NamedTuple):
     """
 
     board: np.ndarray
-    castling_rights: dict[np.int8, np.ndarray]
+    castling_rights: dict[np.int8, dict[np.int8, bool]]
     player: np.int8
     enpassant_file: np.int8
     fifty_move_count: np.int8
     ply_count: np.int16
-    is_checkmate: bool
-    is_draw: bool
+    is_checkmate: Optional[bool] = None
+    is_draw: Optional[bool] = None
 
     @classmethod
     def create_new_game(cls) -> BoardState:
@@ -69,7 +69,10 @@ class BoardState(NamedTuple):
         # Set instance attributes describing the game state to their initial values
         return cls(
             board=board,
-            castling_rights=np.ones(shape=(2, 2), dtype=np.bool_),
+            castling_rights={
+                np.int8(1): {np.int8(-2): True, np.int8(2): True},
+                np.int8(-1): {np.int8(-2): True, np.int8(2): True}
+            },
             player=np.int8(1),
             enpassant_file=np.int8(-1),
             fifty_move_count=np.int8(0),
