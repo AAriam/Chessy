@@ -121,6 +121,14 @@ class Moves(NamedTuple):
             Move(s0, s1, p, pp) for s0, s1, p, pp in zip(self.s0s, self.s1s, self.ps, self.pps)
         ]
 
+    def has_move(self, move: Move):
+        has_s0 = np.all(self.s0s == move.s0, axis=1)
+        has_s1 = np.all(self.s1s == move.s1, axis=1)
+        has_p = self.ps == move.p
+        has_pps = self.pps == move.pp
+        has_all = has_s0 & has_s1 & has_p & has_pps
+        return np.any(has_all)
+
 
 class Color(NamedTuple):
     name: str
