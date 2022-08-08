@@ -58,6 +58,9 @@ class ArrayJudge(Judge):
         -1: np.array([[7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8),
     }
 
+    PAWN_RANK = {1: 1, -1: 6}
+    PROMOTION_RANK = {1: 7, -1: 0}
+
     def __init__(self, initial_state: BoardState):
         self.board: np.ndarray = initial_state.board.copy()
         self.castling_rights: np.ndarray = np.pad(initial_state.castling_rights, (1, 0))
@@ -66,8 +69,8 @@ class ArrayJudge(Judge):
         self.enpassant_file: np.int8 = initial_state.enpassant_file
         self.ply_count: np.int16 = initial_state.ply_count
 
-        empty_array_squares = np.array([], dtype=np.int8).reshape(0, 2)
-        self._empty_move: tuple = (empty_array_squares, empty_array_squares)
+        self.empty_array_squares = np.array([], dtype=np.int8).reshape(0, 2)
+        self._empty_move: tuple = (self.empty_array_squares, self.empty_array_squares)
 
         self.is_checkmate: bool = False
         self.is_check: bool = False
