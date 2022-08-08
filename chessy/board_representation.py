@@ -142,6 +142,17 @@ class Piece(NamedTuple):
     symbol: str
 
 
+class Pieces(NamedTuple):
+    NULL: np.int8 = np.int8(0)
+    P: np.int8 = np.int8(1)
+    N: np.int8 = np.int8(2)
+    B: np.int8 = np.int8(3)
+    R: np.int8 = np.int8(4)
+    Q: np.int8 = np.int8(5)
+    K: np.int8 = np.int8(6)
+
+P = Pieces()
+
 class Square(NamedTuple):
     file: str
     rank: int
