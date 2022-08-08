@@ -339,10 +339,15 @@ class ArrayJudge(Judge):
             running_mask[:, 3][running_mask[:, 3]] &= unpin_mask_attack2
         if not np.any(running_mask):
             return self._empty_move
-        return (
-            np.repeat(s0s, np.count_nonzero(running_mask, axis=1), axis=0),
-            s1s_all[running_mask],
-        )
+
+        s0s = np.repeat(s0s, np.count_nonzero(running_mask, axis=1), axis=0)
+        s1s = s1s_all[running_mask]
+
+        mask_no_promotion = self.mask_ss_non_prom_rank(ss=s1s)
+        reps_for_promotion, pps = self.create_promotion_data(mask_no_promo=mask_no_promotion)
+        s0s = np.repeat(s0s, reps_for_promotion, axis=0)
+        s1s = np.repeat(s1s, reps_for_promotion, axis=0)
+        return s0s, s1s, pps
 
     def generate_king_moves(self) -> tuple[np.ndarray, np.ndarray]:
         s1s_all = self.pos_king + self.MOVE_VECTORS_PIECE[6]
