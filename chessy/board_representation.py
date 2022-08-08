@@ -15,17 +15,17 @@ class BoardState(NamedTuple):
     A data structure representing a full description of a chess position, i.e. the position state.
 
     board : numpy.ndarray(shape=(8, 8), dtype=numpy.int8)
-            A 2-dimensional array representing a specific board position,
-            i.e. the location of each piece on the board.
-            Axis 0 (2nd. dimension) corresponds to files (columns) ordered from 'a' to 'h'.
-            Axis 1 (1st. dimension) corresponds to ranks (rows) ordered from 1 to 8.
-            Thus, indexing the board as `board[i, j]` gives the data for the square on row 'i'
-            and column 'j'. For example, `board[0, 1]` is square 'b1'.
-            The data for each square is an integer from –6 to +6, where:
-            0 = empty, 1 = pawn, 2 = knight, 3 = bishop, 4 = rook, 5 = queen, 6 = king
-            White pieces are denoted with positive integers, while black pieces have the
-            same magnitude but with a negative sign (e.g. +6 = white king, –6 = black king).
-    castling_rights : numpy.ndarray(shape=(2, 2), dtype=numpy.int8)
+        A 2-dimensional array representing a specific board position,
+        i.e. the location of each piece on the board.
+        Axis 0 (2nd. dimension) corresponds to files (columns) ordered from 'a' to 'h'.
+        Axis 1 (1st. dimension) corresponds to ranks (rows) ordered from 1 to 8.
+        Thus, indexing the board as `board[i, j]` gives the data for the square on row 'i'
+        and column 'j'. For example, `board[0, 1]` is square 'b1'.
+        The data for each square is an integer from –6 to +6, where:
+        0 = empty, 1 = pawn, 2 = knight, 3 = bishop, 4 = rook, 5 = queen, 6 = king
+        White pieces are denoted with positive integers, while black pieces have the
+        same magnitude but with a negative sign (e.g. +6 = white king, –6 = black king).
+    castling_rights : dict[numpy.int8, numpy.ndarray(shape=(2,), dtype=numpy.int8)]
         A 2-dimensional array representing castling availability for white and black, i.e. whether
         either player is permanently disqualified to castle, both kingside and queenside.
         Axis 0 (2nd. dimension) corresponds to kingside and queenside availability.
@@ -44,11 +44,13 @@ class BoardState(NamedTuple):
     """
 
     board: np.ndarray
-    castling_rights: np.ndarray
+    castling_rights: dict[np.int8, np.ndarray]
     player: np.int8
     enpassant_file: np.int8
     fifty_move_count: np.int8
     ply_count: np.int16
+    is_checkmate: bool
+    is_draw: bool
 
     @classmethod
     def create_new_game(cls) -> BoardState:
