@@ -5,6 +5,7 @@ Array-based judge and move-generator.
 # Standard library
 from __future__ import annotations
 from typing import Optional, Sequence, NoReturn, Union, Tuple, Iterable
+from copy import deepcopy
 
 # 3rd party
 import numpy as np
@@ -58,7 +59,7 @@ class ArrayJudge(Judge):
     }
 
     def __init__(self, initial_state: BoardState):
-        self.board: np.ndarray = initial_state.board
+        self.board: np.ndarray = initial_state.board.copy()
         self.castling_rights: np.ndarray = np.pad(initial_state.castling_rights, (1, 0))
         self.player: np.int8 = initial_state.player
         self.fifty_move_count: np.int8 = initial_state.fifty_move_count
@@ -78,8 +79,8 @@ class ArrayJudge(Judge):
     @property
     def current_state(self) -> BoardState:
         return BoardState(
-            board=self.board,
-            castling_rights=self.castling_rights[1:, 1:],
+            board=self.board.copy(),
+            castling_rights=self.castling_rights[1:, 1:].copy(),
             player=self.player,
             enpassant_file=self.enpassant_file,
             fifty_move_count=self.fifty_move_count,
@@ -87,8 +88,8 @@ class ArrayJudge(Judge):
         )
 
     @property
-    def valid_moves(self) -> list[Move]:
-        return self._valid_moves
+    def valid_moves(self) -> Moves:
+        return deepcopy(self._valid_moves)
 
     def submit_move(self, move: Move) -> NoReturn:
         move_vect = move.s1 - move.s0
