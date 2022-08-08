@@ -824,8 +824,7 @@ class ArrayJudge(Judge):
     def player_is_checked(self) -> bool:
         pass
 
-    @staticmethod
-    def squares_in_between(s0: np.ndarray, s1: np.ndarray) -> np.ndarray:
+    def squares_in_between(self, s0: np.ndarray, s1: np.ndarray) -> np.ndarray:
         """
         Indices of the squares between two given squares
         lying on an orthogonal/diagonal direction.
