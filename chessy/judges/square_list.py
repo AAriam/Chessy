@@ -75,7 +75,7 @@ class ArrayJudge(Judge):
         self.is_checkmate: bool = False
         self.is_check: bool = False
         self.is_draw: bool = False
-        self._valid_moves: list[Move] = []
+        self._valid_moves: Moves = None
         self.analyze_state()
         return
 
@@ -116,7 +116,7 @@ class ArrayJudge(Judge):
             raise IllegalMoveError(
                 f"{piece_name.capitalize()}s cannot move in direction {move_vect}."
             )
-        if move not in self._valid_moves:
+        if not self._valid_moves.has_move(move):
             if self.is_check:
                 raise IllegalMoveError("Move does not resolve check.")
             raise IllegalMoveError("Submitted move is illegal.")
@@ -134,8 +134,8 @@ class ArrayJudge(Judge):
         if moving_piece_type == 1:
             # Handle promotions and en passant
             self.fifty_move_count = -1
-            if move.p_promo is not None:
-                piece_at_end_square = move.p_promo * self.player
+            if move.pp != 0:
+                piece_at_end_square = move.pp
             if np.all(move_vec_mag == [1, 1]) and captured_piece == 0:
                 self.board[move.s1[0] - self.player, move.s1[1]] = 0
             self.enpassant_file = move.s1[1] if move_vec_mag[0] == 2 else -1
@@ -368,7 +368,7 @@ class ArrayJudge(Judge):
             s1s_final = np.concatenate((s1s_final.reshape(-1, 2), s1s_final_castle.reshape(-1, 2)))
         return np.tile(self.pos_king, s1s_final.shape[0]).reshape(-1, 2), s1s_final
 
-    def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> list[Optional[Move]]:
+    def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
         # Get the squares the king can move into to resolve check.
         king_moves = self.generate_king_moves()
         s0s = king_moves[0]
@@ -415,7 +415,7 @@ class ArrayJudge(Judge):
                     ]
                 )
                 ps = np.concatenate([ps, ps_attacking_checker, ps_advancing])
-        return self.generate_move_objects(s0s=s0s, s1s=s1s, ps=ps)
+        return Moves(s0s=s0s, s1s=s1s, ps=ps)
 
     def king_wont_be_attacked(self, ss: np.ndarray):
         king_pos = tuple(self.pos_king)
