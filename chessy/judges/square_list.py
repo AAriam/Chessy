@@ -12,7 +12,8 @@ import numpy as np
 
 # Self
 from .abc import Judge, IllegalMoveError, GameOverError
-from ..board_representation import BoardState, Move, Moves, COLOR, PIECE, P
+from ..board_representation import BoardState, Move, Moves, COLOR, PIECE
+from ..consts import *
 
 
 class ArrayJudge(Judge):
@@ -27,39 +28,6 @@ class ArrayJudge(Judge):
         First element is a dummy element, so that `self._can_castle[self._turn]`
         gives the castling list of current player
     """
-
-    DIRECTION_UNIT_VECTORS = np.array(
-        [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]], dtype=np.int8
-    )
-
-    UNIT_VECTORS_ORTHO = np.array([[1, 0], [0, 1], [-1, 0], [0, -1]], dtype=np.int8)
-    UNIT_VECTORS_DIAG = np.array([[1, 1], [-1, 1], [-1, -1], [1, -1]], dtype=np.int8)
-
-    MOVE_VECTORS_PIECE = {
-        P.P: np.array([[1, 0], [2, 0], [1, 1], [1, -1]], dtype=np.int8),
-        P.N: np.array(
-            [[2, 1], [2, -1], [1, 2], [1, -2], [-1, 2], [-1, -2], [-2, 1], [-2, -1]], dtype=np.int8
-        ),
-        P.B: UNIT_VECTORS_DIAG,
-        P.R: UNIT_VECTORS_ORTHO,
-        P.Q: np.concatenate([UNIT_VECTORS_ORTHO, UNIT_VECTORS_DIAG]),
-        P.K: np.concatenate([DIRECTION_UNIT_VECTORS, np.array([[0, -2], [0, 2]], dtype=np.int8)]),
-    }
-    # Squares that must be empty for each player for castling to be allowed. First three squares
-    # correspond to queenside castle, and the next two correspond to kingside castle.
-    CASTLING_SQUARES_EMPTY = {
-        1: np.array([[0, 1], [0, 2], [0, 3], [0, 5], [0, 6]], dtype=np.int8),
-        -1: np.array([[7, 1], [7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8),
-    }
-    # Squares that must not be under attack for castling to be allowed for each player.
-    # First two squares correspond to queenside castle, and the next two to kingside castle.
-    CASTLING_SQUARES_CHECK = {
-        1: np.array([[0, 2], [0, 3], [0, 5], [0, 6]], dtype=np.int8),
-        -1: np.array([[7, 2], [7, 3], [7, 5], [7, 6]], dtype=np.int8),
-    }
-
-    PAWN_RANK = {1: 1, -1: 6}
-    PROMOTION_RANK = {1: 7, -1: 0}
 
     def __init__(self, initial_state: BoardState):
         self.board: np.ndarray = initial_state.board.copy()
@@ -127,14 +95,14 @@ class ArrayJudge(Judge):
         piece_at_end_square = self.pieces_in_squares(ss=move.s0)
         moving_piece_type = self.piece_types(piece_at_end_square)
         captured_piece = self.pieces_in_squares(ss=move.s1)
-        if captured_piece != P.NULL:
+        if captured_piece != NULL:
             self.fifty_move_count = -1
         move_vec = move.s1 - move.s0
         move_vec_mag = np.abs(move_vec)
-        if moving_piece_type == P.P:
+        if moving_piece_type == PAWN:
             # Handle promotions and en passant
             self.fifty_move_count = -1
-            if move.pp != P.NULL:
+            if move.pp != NULL:
                 piece_at_end_square = move.pp
             if np.all(move_vec_mag == [1, 1]) and captured_piece == 0:
                 self.board[move.s1[0] - self.player, move.s1[1]] = 0
@@ -142,8 +110,8 @@ class ArrayJudge(Judge):
         else:
             self.enpassant_file = -1
             # Apply castling and/or modify castling rights
-            if moving_piece_type == P.K:
-                self.castling_rights[self.player] = 0
+            if moving_piece_type == KING:
+                self.castling_rights[self.player] = dict.fromkeys(self.castling_rights[self.player], False)
                 if move_vec_mag[1] == 2:
                     rook_pos = (move.s1[0], 7 if move_vec[1] == 2 else 0)
                     rook_end_pos = (move.s1[0], 5 if move_vec[1] == 2 else 3)
@@ -193,14 +161,16 @@ class ArrayJudge(Judge):
         """
         s0s_p, s1s_p, pps = self.generate_pawn_moves()
         s0s_n, s1s_n = self.generate_knight_moves()
-        s0s_b, s1s_b = self.generate_big_piece_moves(p=P.B)
-        s0s_r, s1s_r = self.generate_big_piece_moves(p=P.R)
-        s0s_q, s1s_q = self.generate_big_piece_moves(p=P.Q)
+        s0s_b, s1s_b = self.generate_big_piece_moves(p=BISHOP)
+        s0s_r, s1s_r = self.generate_big_piece_moves(p=ROOK)
+        s0s_q, s1s_q = self.generate_big_piece_moves(p=QUEEN)
         s0s_k, s1s_k = self.generate_king_moves()
         s0s = [s0s_p, s0s_n, s0s_b, s0s_r, s0s_q, s0s_k]
         s1s = [s1s_p, s1s_n, s1s_b, s1s_r, s1s_q, s1s_k]
         move_counts = [s.shape[0] for s in s0s]
-        ps = np.repeat(np.array(P[1:], dtype=np.int8), move_counts)
+        ps = np.repeat(
+            np.array([PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING], dtype=np.int8), move_counts
+        )
         pps = np.concatenate(pps, np.zeros(sum(move_counts[1:]), dtype=np.int8))
         return Moves(s0s=np.concatenate(s0s), s1s=np.concatenate(s1s), ps=ps, pps=pps)
 
@@ -218,7 +188,7 @@ class ArrayJudge(Judge):
         if s0s.size == 0:  # If no piece of that kind is on board, continue to next piece.
             return self._empty_move
         # For each start-square, go one square in every direction that piece can move in.
-        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[p]
+        s1s = s0s[:, np.newaxis] + MOVE_DIRECTIONS[p]
         # Get the end squares that are still in-board, to eliminate searching in
         # directions leaving the board (when piece is on one or two edges).
         mask_inboard = self.squares_are_inside_board(ss=s1s)
@@ -288,10 +258,10 @@ class ArrayJudge(Judge):
         """
         # The procedure is similar to the one for big pieces, but here we don't have to check for
         # neighbors and calculate move magnitudes, since the knight can jump.
-        s0s = self.squares_of_piece(p=self.player * P.N)
+        s0s = self.squares_of_piece(p=self.player * KNIGHT)
         if s0s.size == 0:
             return self._empty_move
-        s1s = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[P.N]
+        s1s = s0s[:, np.newaxis] + MOVE_DIRECTIONS[KNIGHT]
         mask_inboard = self.squares_are_inside_board(ss=s1s)
         s0s_valid = np.repeat(s0s, np.count_nonzero(mask_inboard, axis=1), axis=0)
         s1s_valid = s1s[mask_inboard]
@@ -308,7 +278,7 @@ class ArrayJudge(Judge):
         s0s = self.squares_of_piece(p=self.player)
         if s0s.size == 0:
             return self._empty_move
-        s1s_all = s0s[:, np.newaxis] + self.MOVE_VECTORS_PIECE[1] * self.player
+        s1s_all = s0s[:, np.newaxis] + MOVE_DIRECTIONS[PAWN] * self.player
         s1s_forward, s1s_attack = s1s_all[:, :2], s1s_all[:, 2:]
         s1s_single, s1s_double = s1s_forward[:, 0], s1s_forward[:, 1]
         running_mask = self.squares_are_inside_board(ss=s1s_all)
@@ -351,8 +321,8 @@ class ArrayJudge(Judge):
         return s0s, s1s, pps
 
     def generate_king_moves(self) -> tuple[np.ndarray, np.ndarray]:
-        s1s_all = self.pos_king + self.MOVE_VECTORS_PIECE[6]
-        s1s_normal, castle_s1s = s1s_all[:-2], s1s_all[-2:]
+        s1s_all = self.pos_king + MOVE_DIRECTIONS[KING]
+        s1s_normal, s1s_castle = s1s_all[:-2], s1s_all[-2:]
         s1s_inboard = s1s_normal[ArrayJudge.squares_are_inside_board(ss=s1s_normal)]
         s1s_vacant = s1s_inboard[~self.squares_belong_to_player(ss=s1s_inboard)]
         s1s_final = s1s_vacant[self.king_wont_be_attacked(ss=s1s_vacant)]
@@ -361,7 +331,7 @@ class ArrayJudge(Judge):
         ):  # TODO: Check the ordering of kingside/queenside castles
             vacant = self.squares_are_empty(ss=self.CASTLING_SQUARES_EMPTY[self.player])
             mask_vacant = [np.all(vacant[:3]), np.all(vacant[3:])]
-            not_checked = self.king_wont_be_attacked(ss=self.CASTLING_SQUARES_CHECK[self.player])
+            not_checked = self.king_wont_be_attacked(ss=CASTLING_SS_CHECK[self.player])
             mask_not_checked = np.all(not_checked.reshape(2, 2), axis=1)
             mask_castle = mask_vacant & mask_not_checked & self.castling_rights[self.player][1:]
             s1s_final_castle = castle_s1s[mask_castle]
@@ -455,26 +425,26 @@ class ArrayJudge(Judge):
             Coordinates of the 'checking' squares.
         """
         p = -self.player if p is None else p
-        s = self.squares_of_piece(-p * P.K)[0] if s is None else s
+        s = self.squares_of_piece(-p * KING)[0] if s is None else s
         # 1. CHECK FOR KNIGHT ATTACKS
         # Add given start-square to all knight vectors to get all possible attacking positions
-        knight_pos = s + self.MOVE_VECTORS_PIECE[P.N]
+        knight_pos = s + MOVE_DIRECTIONS[KNIGHT]
         # Take those end squares that are within the board
         inboards = knight_pos[self.squares_are_inside_board(ss=knight_pos)]
-        mask_knight = self.pieces_in_squares(inboards) == p * P.N
+        mask_knight = self.pieces_in_squares(inboards) == p * KNIGHT
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get nearest neighbor in each direction
         neighbors_pos = self.neighbor_squares_vectorized(
-            ss=np.tile(s, 8).reshape(-1, 2), ds=self.DIRECTION_UNIT_VECTORS * p
+            ss=np.tile(s, 8).reshape(-1, 2), ds=DIRECTIONS * p
         )
         neighbors = self.pieces_in_squares(neighbors_pos)
         # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
         opp_pieces = p * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
         # mask_king = (neighbors == opp_pieces[6]) & (np.abs(neighbors_pos - s).max(axis=1) == 1)
-        mask_queen = neighbors == p * P.Q
-        mask_rook = neighbors[::2] == p * P.R
-        mask_bishop = neighbors[1::2] == p * P.B
+        mask_queen = neighbors == p * QUEEN
+        mask_rook = neighbors[::2] == p * ROOK
+        mask_bishop = neighbors[1::2] == p * BISHOP
 
         if status != "advancing":
             pawn_dirs = [3, 5]
@@ -486,7 +456,7 @@ class ArrayJudge(Judge):
                 (dir_mag_vertical == -p * 2)
                 & (neighbors_pos[pawn_dirs, 0] == (0 if p == 1 else 6))
             )
-        mask_pawn_right_direction = neighbors[pawn_dirs] == p * P.P
+        mask_pawn_right_direction = neighbors[pawn_dirs] == p * PAWN
         mask_pawn = mask_pawn_right_direction & mask_pawn_right_distance
 
         leading_squares = np.concatenate(
@@ -535,16 +505,15 @@ class ArrayJudge(Judge):
             ds=-s0ks_uv[~current_unpin_mask],
         )
         otherside_neighbors = self.pieces_in_squares(ss=otherside_neighbors_squares)
-        no_queen = otherside_neighbors != -self.player * P.Q
+        no_queen = otherside_neighbors != -self.player * QUEEN
         has_orthogonal_dir = s0ks_uv[~current_unpin_mask] == 0
         is_orthogonal = has_orthogonal_dir[..., 0] | has_orthogonal_dir[..., 1]
-        no_rooks = otherside_neighbors[is_orthogonal] != -self.player * P.R
-        no_bishops = otherside_neighbors[~is_orthogonal] != -self.player * P.B
+        no_rooks = otherside_neighbors[is_orthogonal] != -self.player * ROOK
+        no_bishops = otherside_neighbors[~is_orthogonal] != -self.player * BISHOP
         mask_no_pinning = no_queen
         mask_no_pinning[is_orthogonal] &= no_rooks
         mask_no_pinning[~is_orthogonal] &= no_bishops
         current_unpin_mask[~current_unpin_mask] = mask_no_pinning
-
         return current_unpin_mask
 
     def mask_absolute_pin(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
@@ -676,10 +645,12 @@ class ArrayJudge(Judge):
         )
 
     def is_enpassant_square(self, ss):
-        return np.all(ss == [(5 if self.player == 1 else 2), self.enpassant_file], axis=-1)
+        return np.all(ss == [RANK_ENPASSANT_END[self.player], self.enpassant_file], axis=-1)
 
     def pawn_can_capture_square(self, s1):
-        can_capture_enpassant = np.all(s1 == [(5 if self.player == 1 else 2), self.enpassant_file])
+        can_capture_enpassant = np.all(
+            s1 == [RANK_ENPASSANT_END[self.player], self.enpassant_file]
+        )
         can_capture_normal = self.squares_are_inside_board(
             ss=s1
         ) and self.squares_belong_to_opponent(ss=s1)
@@ -770,7 +741,7 @@ class ArrayJudge(Judge):
 
     @property
     def king(self):
-        return self.player * P.K
+        return self.player * KING
 
     def mask_ss_non_p_rank(self, ss: np.ndarray) -> np.ndarray:
         """
@@ -790,7 +761,7 @@ class ArrayJudge(Judge):
             on the pawn-rank of the current player. This can be used, e.g. to check which
             pawns of the current player have not been moved yet.
         """
-        return ss[..., 0] == self.PAWN_RANK[self.player]
+        return ss[..., 0] == RANK_PAWN[self.player]
 
     def mask_ss_non_prom_rank(self, ss: np.ndarray) -> np.ndarray:
         """
@@ -810,7 +781,7 @@ class ArrayJudge(Judge):
             on the promotion-rank of the current player. This can be used, e.g. to find moves
             leading to promotion.
         """
-        return ss[..., 0] == self.PROMOTION_RANK[self.player]
+        return ss[..., 0] == RANK_PROMOTION[self.player]
 
     @property
     def move_is_promotion(self) -> bool:
@@ -859,7 +830,7 @@ class ArrayJudge(Judge):
         reps_for_promotion = mask_no_promo * 3 + 1
         pps = []  # Create promotion array
         for is_promotion in mask_no_promo:
-            pps.extend([P.N, P.B, P.R, P.Q] if is_promotion else [P.NULL])
+            pps.extend([KNIGHT, BISHOP, ROOK, QUEEN] if is_promotion else [NULL])
         pps = np.array(pps, dtype=np.int8)
         return reps_for_promotion, pps
 
@@ -943,19 +914,18 @@ class ArrayJudge(Judge):
         move_abs = np.abs(move_vect)
         move_manhattan_dist = move_abs.sum()
         piece_type = abs(p)
-        match piece_type:
-            case P.P:
-                return (move_vect[0] == p and move_abs[1] < 2) or np.all(move_vect == [2 * p, 0])
-            case P.N:
-                return not (move_manhattan_dist != 3 or np.isin(3, move_abs))
-            case P.B:
-                return move_abs[0] == move_abs[1]
-            case P.R:
-                return np.isin(0, move_abs)
-            case P.Q:
-                return move_abs[0] == move_abs[1] or np.isin(0, move_abs)
-            case P.K:
-                return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
+        if piece_type == PAWN:
+            return (move_vect[0] == p and move_abs[1] < 2) or np.all(move_vect == [2 * p, 0])
+        elif piece_type == KNIGHT:
+            return not (move_manhattan_dist != 3 or np.isin(3, move_abs))
+        elif piece_type == BISHOP:
+            return move_abs[0] == move_abs[1]
+        elif piece_type == ROOK:
+            return np.isin(0, move_abs)
+        elif piece_type == QUEEN:
+            return move_abs[0] == move_abs[1] or np.isin(0, move_abs)
+        elif piece_type == KING:
+            return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
 
     def generate_move_objects(
         self, s0s: np.ndarray, s1s: np.ndarray, ps: Union[np.int8, np.ndarray]
@@ -1016,7 +986,7 @@ class ArrayJudge(Judge):
         s0s_all, s1s_all, ps_all, pps_all = [], [], [], []
         # Get king moves and add to lists
         s0s_k, s1s_k = self.generate_king_moves()
-        ps_k = np.ones(shape=s0s_k.shape[0], dtype=np.int8) * self.player * P.K
+        ps_k = np.ones(shape=s0s_k.shape[0], dtype=np.int8) * self.player * KING
         pps_k = np.zeros(shape=s0s_k.shape[0], dtype=np.int8)
         s0s_all.append(s0s_k)
         s1s_all.append(s1s_k)
