@@ -93,7 +93,7 @@ class ArrayJudge(Judge):
 
     def submit_move(self, move: Move) -> NoReturn:
         move_vect = move.s1 - move.s0
-        piece = self.piece_in_squares(ss=move.s0)
+        piece = self.pieces_in_squares(ss=move.s0)
         if self.is_checkmate:
             raise GameOverError("Game over. Current player is checkmated.")
         if self.is_draw:
@@ -121,9 +121,9 @@ class ArrayJudge(Judge):
         return
 
     def apply_move(self, move: Move) -> None:
-        piece_at_end_square = self.piece_in_squares(ss=move.s0)
+        piece_at_end_square = self.pieces_in_squares(ss=move.s0)
         moving_piece_type = self.piece_types(piece_at_end_square)
-        captured_piece = self.piece_in_squares(ss=move.s1)
+        captured_piece = self.pieces_in_squares(ss=move.s1)
         if captured_piece != 0:
             self.fifty_move_count = -1
         move_vec = move.s1 - move.s0
@@ -246,7 +246,7 @@ class ArrayJudge(Judge):
         # Get the coordinates of all neighbors of all remaining start-squares
         neighbors_pos = self.neighbor_squares_vectorized(ss=s0s_valid, ds=ds_valid)
         # Get the pieces on those squares
-        neighbor_pieces = self.piece_in_squares(neighbors_pos)
+        neighbor_pieces = self.pieces_in_squares(neighbors_pos)
         # Create a shift array (elements 0 or 1) to account for neighbors that belong to the
         # player (and thus cannot be moved into), vs. neighbors that are empty or belong to
         # the opponent (and thus can be moved into).
@@ -371,7 +371,11 @@ class ArrayJudge(Judge):
             ss_attacking_checker = self.squares_leading_to(
                 s=ss_checking_king[0], p=self.player, status="attacking"
             )
-            ps_attacking_checker = self.piece_in_squares(ss=ss_attacking_checker)
+            ps_attacking_checker = self.pieces_in_squares(ss=ss_attacking_checker)
+            s1s_attacking_checker = np.tile(
+                ss_checking_king[0], reps=ss_attacking_checker.size // 2
+            ).reshape(-1, 2)
+
             # Find blocking moves
             s0s_advancing = []
             s1s_advancing = []
@@ -389,7 +393,7 @@ class ArrayJudge(Judge):
             if s0s_advancing:  # If list is not empty
                 s0s_advancing = np.concatenate(s0s_advancing)
                 s1s_advancing = np.concatenate(s1s_advancing)
-                ps_advancing = self.piece_in_squares(ss=s0s_advancing)
+                ps_advancing = self.pieces_in_squares(ss=s0s_advancing)
 
                 s0s = np.concatenate([s0s, ss_attacking_checker, s0s_advancing])
                 s1s = np.concatenate(
@@ -450,13 +454,13 @@ class ArrayJudge(Judge):
         knight_pos = s + self.MOVE_VECTORS_PIECE[2]
         # Take those end squares that are within the board
         inboards = knight_pos[self.squares_are_inside_board(ss=knight_pos)]
-        mask_knight = self.piece_in_squares(inboards) == p * 2
+        mask_knight = self.pieces_in_squares(inboards) == p * 2
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get nearest neighbor in each direction
         neighbors_pos = self.neighbor_squares_vectorized(
             ss=np.tile(s, 8).reshape(-1, 2), ds=self.DIRECTION_UNIT_VECTORS * p
         )
-        neighbors = self.piece_in_squares(neighbors_pos)
+        neighbors = self.pieces_in_squares(neighbors_pos)
         # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
         opp_pieces = p * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
@@ -515,7 +519,7 @@ class ArrayJudge(Judge):
             ss=s0s[~current_unpin_mask],
             ds=s0ks_uv[~current_unpin_mask],
         )
-        kingside_neighbors = self.piece_in_squares(ss=kingside_neighbors_squares)
+        kingside_neighbors = self.pieces_in_squares(ss=kingside_neighbors_squares)
         mask_king_protected = kingside_neighbors != self.king
         current_unpin_mask[~current_unpin_mask] = mask_king_protected
 
@@ -523,7 +527,7 @@ class ArrayJudge(Judge):
             ss=s0s[~current_unpin_mask],
             ds=-s0ks_uv[~current_unpin_mask],
         )
-        otherside_neighbors = self.piece_in_squares(ss=otherside_neighbors_squares)
+        otherside_neighbors = self.pieces_in_squares(ss=otherside_neighbors_squares)
         no_queen = otherside_neighbors != -self.player * 5
         has_orthogonal_dir = s0ks_uv[~current_unpin_mask] == 0
         is_orthogonal = has_orthogonal_dir[..., 0] | has_orthogonal_dir[..., 1]
@@ -563,7 +567,7 @@ class ArrayJudge(Judge):
             return np.ones(shape=ds.shape[0], dtype=np.bool_)
         # 2. If there is a piece between the square and the king, or to the other side
         # of the square, along the sk vector, or the piece on the other side is not attacking
-        kingside_neigh, otherside_neigh = self.piece_in_squares(
+        kingside_neigh, otherside_neigh = self.pieces_in_squares(
             ss=self.neighbor_squares(s=s, ds=np.array([sk_uv, -sk_uv]))
         )
         if kingside_neigh != self.king or np.isin(
@@ -585,7 +589,7 @@ class ArrayJudge(Judge):
             neighbor_squares[curr_mask] = next_neighbors_pos[curr_mask] - ds[curr_mask]
             not_set[not_set] = mask_inboard
             inboard_squares = next_neighbors_pos[not_set]
-            mask_occupied = self.piece_in_squares(ss=inboard_squares) != 0
+            mask_occupied = self.pieces_in_squares(ss=inboard_squares) != 0
             curr_mask = not_set.copy()
             curr_mask[curr_mask] = mask_occupied
             neighbor_squares[curr_mask] = inboard_squares[mask_occupied]
@@ -698,7 +702,7 @@ class ArrayJudge(Judge):
         """
         return self.castling_rights[self.player, side]
 
-    def piece_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
+    def pieces_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
         """
         Get the type of pieces on a given number of squares.
 
@@ -731,16 +735,16 @@ class ArrayJudge(Judge):
         """
         Whether a given square has a piece on it belonging to the player in turn.
         """
-        return np.sign(self.piece_in_squares(ss=ss)) == self.player
+        return np.sign(self.pieces_in_squares(ss=ss)) == self.player
 
     def squares_belong_to_opponent(self, ss: np.ndarray) -> bool:
         """
         Whether a given square has a piece on it belonging to the opponent.
         """
-        return np.sign(self.piece_in_squares(ss=ss)) == self.player * -1
+        return np.sign(self.pieces_in_squares(ss=ss)) == self.player * -1
 
     def squares_are_empty(self, ss: np.ndarray):
-        return self.piece_in_squares(ss=ss) == 0
+        return self.pieces_in_squares(ss=ss) == 0
 
     def pieces_belong_to_player(
         self, ps: Union[np.int8, np.ndarray]
