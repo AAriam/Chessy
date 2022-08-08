@@ -366,7 +366,7 @@ class ArrayJudge(Judge):
             mask_castle = mask_vacant & mask_not_checked & self.castling_rights[self.player][1:]
             s1s_final_castle = castle_s1s[mask_castle]
             s1s_final = np.concatenate((s1s_final.reshape(-1, 2), s1s_final_castle.reshape(-1, 2)))
-        return np.tile(self.pos_king, s1s_final.shape[0]).reshape(-1, 2), s1s_final
+        return np.tile(self.pos_king, reps=s1s_final.shape[0]).reshape(-1, 2), s1s_final
 
     def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
         # Get the squares the king can move into to resolve check.
@@ -408,9 +408,7 @@ class ArrayJudge(Judge):
                 s1s = np.concatenate(
                     [
                         s1s,
-                        np.tile(ss_checking_king[0], reps=ss_attacking_checker.size // 2).reshape(
-                            -1, 2
-                        ),
+                        s1s_attacking_checker,
                         s1s_advancing,
                     ]
                 )
@@ -725,7 +723,7 @@ class ArrayJudge(Judge):
         Union[np.ndarray, np.int8]
             Piece types as a single integer (when `ss` is 1-dimensional) or a 1d-array of size n.
         """
-        if ss.size // 2 != 0:
+        if ss.size > 1:
             return self.board[ss[..., 0], ss[..., 1]]
         else:
             return np.array([], dtype=np.int8)
