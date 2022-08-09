@@ -194,6 +194,7 @@ class ArrayJudge(Judge):
         self._board[tuple(move.s1)] = piece_at_end_square
         self._board[tuple(move.s0)] = 0
         self._fifty_move_count += 1
+        self._ply_count += 1
         self._is_check = False
         self._player *= -1
         self.analyze_state()
