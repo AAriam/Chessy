@@ -389,8 +389,13 @@ class ArrayJudge(Judge):
     def king_wont_be_attacked(self, ss: np.ndarray):
         king_pos = tuple(self.pos_king)
         self.board[king_pos] = 0  # temporarily remove king from board
-        square_is_not_attacked = [self.squares_leading_to(s=square).size == 0 for square in ss]
-        self.board[king_pos] = self.king  # put it back
+        square_is_not_attacked = []
+        for square in ss:
+            piece_in_square = self.pieces_in_squares(ss=square)
+            self.board[tuple(square)] = 0  # temporarily remove the piece from the square
+            square_is_not_attacked.append(self.squares_leading_to(s=square).size == 0)
+            self.board[tuple(square)] = piece_in_square  # put the piece back
+        self.board[king_pos] = self.king  # put the king back
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
     # def squares_attacking(self, s: np.ndarray, p: Optional[np.int8] = None) -> np.ndarray:
