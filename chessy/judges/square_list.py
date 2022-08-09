@@ -482,7 +482,7 @@ class ArrayJudge(Judge):
 
         return leading_squares
 
-    def mask_unpinned_absolute_vectorized(self, s0s, s1s):
+    def mask_absolute_pin(self, s0s, s1s):
         current_unpin_mask = np.zeros(s0s.size // 2, dtype=np.bool_)
 
         _, s0ks_uv, _, s0ks_cardinal_mask = ArrayJudge.move_dir_mag(s0s=s0s, s1s=self.pos_king)
@@ -520,42 +520,42 @@ class ArrayJudge(Judge):
         current_unpin_mask[~current_unpin_mask] = mask_no_pinning
         return current_unpin_mask
 
-    def mask_absolute_pin(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
-        """
-        Whether a given number of orthogonal/diagonal directions from a given square are free
-        from breaking an absolute pin for the current player.
-
-        Parameters
-        ----------
-        s : numpy.ndarray(shape=(2,), dtype=numpy.int8)
-            Coordinates of the square.
-        ds : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
-            A 2d-array of orthogonal/diagonal directions.
-
-        Returns
-        -------
-        numpy.ndarray(shape=(n,), dtype=numpy.bool_)
-            A boolean array that can be used to select the unpinned directions.
-        """
-        # A move from a given square cannot break a pin, if:
-        # (notice that the order matters, i.e. checking later criteria without first having checked
-        # all the earlier ones may result in a wrong conclusion)
-        # 1. If the square-king (sk) vector is not cardinal, then regardless of direction,
-        # no move from that square is pinned.
-        sk_v, sk_uv, sk_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=s, s1s=self.pos_king)
-        if not is_cardinal:
-            return np.ones(shape=ds.shape[0], dtype=np.bool_)
-        # 2. If there is a piece between the square and the king, or to the other side
-        # of the square, along the sk vector, or the piece on the other side is not attacking
-        kingside_neigh, otherside_neigh = self.pieces_in_squares(
-            ss=self.neighbor_squares(s=s, ds=np.array([sk_uv, -sk_uv]))
-        )
-        if kingside_neigh != self.king or np.isin(
-            otherside_neigh, np.array([5, 4 if 0 in sk_uv else 3]) * self.opponent, invert=True
-        ):
-            return np.ones(shape=ds.shape[0], dtype=np.bool_)
-        # 3. Otherwise, only directions along the sk-vector are not pinned.
-        return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
+    # def mask_absolute_pin(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
+    #     """
+    #     Whether a given number of orthogonal/diagonal directions from a given square are free
+    #     from breaking an absolute pin for the current player.
+    #
+    #     Parameters
+    #     ----------
+    #     s : numpy.ndarray(shape=(2,), dtype=numpy.int8)
+    #         Coordinates of the square.
+    #     ds : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
+    #         A 2d-array of orthogonal/diagonal directions.
+    #
+    #     Returns
+    #     -------
+    #     numpy.ndarray(shape=(n,), dtype=numpy.bool_)
+    #         A boolean array that can be used to select the unpinned directions.
+    #     """
+    #     # A move from a given square cannot break a pin, if:
+    #     # (notice that the order matters, i.e. checking later criteria without first having checked
+    #     # all the earlier ones may result in a wrong conclusion)
+    #     # 1. If the square-king (sk) vector is not cardinal, then regardless of direction,
+    #     # no move from that square is pinned.
+    #     sk_v, sk_uv, sk_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=s, s1s=self.pos_king)
+    #     if not is_cardinal:
+    #         return np.ones(shape=ds.shape[0], dtype=np.bool_)
+    #     # 2. If there is a piece between the square and the king, or to the other side
+    #     # of the square, along the sk vector, or the piece on the other side is not attacking
+    #     kingside_neigh, otherside_neigh = self.pieces_in_squares(
+    #         ss=self.neighbor_squares(s=s, ds=np.array([sk_uv, -sk_uv]))
+    #     )
+    #     if kingside_neigh != self.king or np.isin(
+    #         otherside_neigh, np.array([5, 4 if 0 in sk_uv else 3]) * self.opponent, invert=True
+    #     ):
+    #         return np.ones(shape=ds.shape[0], dtype=np.bool_)
+    #     # 3. Otherwise, only directions along the sk-vector are not pinned.
+    #     return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
 
     def neighbor_squares_vectorized(self, ss, ds):
         neighbor_squares = np.zeros(shape=ss.shape, dtype=np.int8)
