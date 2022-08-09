@@ -699,6 +699,14 @@ class ArrayJudge(Judge):
         return np.argwhere(self.board == p)
 
     @property
+    def opponent(self):
+        return self.player * -1
+
+    @property
+    def occupied_squares(self):
+        return np.argwhere(self.board != NULL)
+
+    @property
     def squares_of_player(self):
         return np.argwhere(np.sign(self.board) == self.player)
 
