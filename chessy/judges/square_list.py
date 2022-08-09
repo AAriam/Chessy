@@ -717,13 +717,19 @@ class ArrayJudge(Judge):
         """
         Whether a given square has a piece on it belonging to the player in turn.
         """
-        return np.sign(self.pieces_in_squares(ss=ss)) == self.player
+        return self.squares_belong_to(ss=ss, p=self.player)
 
     def squares_belong_to_opponent(self, ss: np.ndarray) -> bool:
         """
         Whether a given square has a piece on it belonging to the opponent.
         """
-        return np.sign(self.pieces_in_squares(ss=ss)) == self.player * -1
+        return self.squares_belong_to(ss=ss, p=self.opponent)
+
+    def squares_belong_to(self, ss: np.ndarray, p: np.int8) -> bool:
+        """
+        Whether a given square has a piece on it belonging to a given player.
+        """
+        return np.sign(self.pieces_in_squares(ss=ss)) == p
 
     def squares_are_empty(self, ss: np.ndarray):
         return self.pieces_in_squares(ss=ss) == 0
