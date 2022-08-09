@@ -393,15 +393,15 @@ class ArrayJudge(Judge):
         self.board[king_pos] = self.king  # put it back
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
-    def squares_attacking(self, s: np.ndarray, p: Optional[np.int8] = None) -> np.ndarray:
-        squares_checking = self.squares_leading_to(s=s, p=p)
-        unpin_mask = []
-        for square in squares_checking:
-            move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=square, s1s=s)
-            unpin_mask.append(
-                self.mask_absolute_pin(s=square, ds=np.expand_dims(move_uv, axis=0))[0]
-            )
-        return squares_checking[unpin_mask]
+    # def squares_attacking(self, s: np.ndarray, p: Optional[np.int8] = None) -> np.ndarray:
+    #     squares_checking = self.squares_leading_to(s=s, p=p)
+    #     unpin_mask = []
+    #     for square in squares_checking:
+    #         move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=square, s1s=s)
+    #         unpin_mask.append(
+    #             self.mask_absolute_pin(s=square, ds=np.expand_dims(move_uv, axis=0))[0]
+    #         )
+    #     return squares_checking[unpin_mask]
 
     def squares_leading_to(
         self, s: Optional[np.ndarray] = None, p: Optional[np.int8] = None, status: str = "checking"
