@@ -62,7 +62,7 @@ class Judge(ABC):
 
     @property
     @abstractmethod
-    def board_is_checkmate(self) -> bool:
+    def is_checkmate(self) -> bool:
         """
         Whether the current player is checkmated.
 
@@ -74,7 +74,7 @@ class Judge(ABC):
 
     @property
     @abstractmethod
-    def board_is_draw(self) -> bool:
+    def is_draw(self) -> bool:
         """
         Whether the game is a draw, due to the board configuration (not fifty move draw rule).
 
