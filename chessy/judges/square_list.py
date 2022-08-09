@@ -208,7 +208,7 @@ class ArrayJudge(Judge):
             return self._empty_move
         # From the remaining end-squares, get those in directions
         # that don't break an absolute pin.
-        mask_unpinned = self.mask_unpinned_absolute_vectorized(
+        mask_unpinned = self.mask_absolute_pin(
             s0s=s0s_valid[mask_vacant], s1s=s1s_valid[mask_vacant]
         )
         if not np.any(mask_unpinned):  # If no direction is remained, go to next piece.
@@ -270,7 +270,7 @@ class ArrayJudge(Judge):
         mask_vacant = ~self.squares_belong_to_player(ss=s1s_valid)
         if not np.any(mask_vacant):
             return self._empty_move
-        mask_unpinned = self.mask_unpinned_absolute_vectorized(
+        mask_unpinned = self.mask_absolute_pin(
             s0s=s0s_valid[mask_vacant], s1s=s1s_valid[mask_vacant]
         )
         return s0s_valid[mask_vacant][mask_unpinned], s1s_valid[mask_vacant][mask_unpinned]
@@ -289,7 +289,7 @@ class ArrayJudge(Judge):
         running_mask[:, 0][running_mask[:, 0]] &= mask_vacant_forward1
         running_mask[:, 1][running_mask[:, 1]] &= mask_vacant_forward2
         if np.any(running_mask[:, 0]):
-            unpin_mask_forward = self.mask_unpinned_absolute_vectorized(
+            unpin_mask_forward = self.mask_absolute_pin(
                 s0s=s0s[running_mask[:, 0]], s1s=s1s_single[running_mask[:, 0]]
             )
             running_mask[:, 0][running_mask[:, 0]] &= unpin_mask_forward
@@ -301,12 +301,12 @@ class ArrayJudge(Judge):
         ) | self.is_enpassant_square(ss=s1s_attack[running_mask[:, 2:]])
         running_mask[:, 2:][running_mask[:, 2:]] &= mask_can_attack
         if np.any(running_mask[:, 2]):
-            unpin_mask_attack1 = self.mask_unpinned_absolute_vectorized(
+            unpin_mask_attack1 = self.mask_absolute_pin(
                 s0s=s0s[running_mask[:, 2]], s1s=s1s_attack[:, 0][running_mask[:, 2]]
             )
             running_mask[:, 2][running_mask[:, 2]] &= unpin_mask_attack1
         if np.any(running_mask[:, 3]):
-            unpin_mask_attack2 = self.mask_unpinned_absolute_vectorized(
+            unpin_mask_attack2 = self.mask_absolute_pin(
                 s0s=s0s[running_mask[:, 3]], s1s=s1s_attack[:, 1][running_mask[:, 3]]
             )
             running_mask[:, 3][running_mask[:, 3]] &= unpin_mask_attack2
@@ -475,7 +475,7 @@ class ArrayJudge(Judge):
         )
 
         if status != "checking":
-            mask_absolute_pin = self.mask_unpinned_absolute_vectorized(
+            mask_absolute_pin = self.mask_absolute_pin(
                 s0s=leading_squares, s1s=np.tile(s, leading_squares.size // 2).reshape(-1, 2)
             )
             leading_squares = leading_squares[mask_absolute_pin]
