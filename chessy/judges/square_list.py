@@ -423,7 +423,7 @@ class ArrayJudge(Judge):
         numpy.ndarray[(shape=(n, 2), dtype=numpy.int8)]
             Coordinates of the 'checking' squares.
         """
-        p = -self.player if p is None else p
+        p = self.opponent if p is None else p
         s = self.squares_of_piece(-p * KING)[0] if s is None else s
         # 1. CHECK FOR KNIGHT ATTACKS
         # Add given start-square to all knight vectors to get all possible attacking positions
@@ -504,11 +504,11 @@ class ArrayJudge(Judge):
             ds=-s0ks_uv[~current_unpin_mask],
         )
         otherside_neighbors = self.pieces_in_squares(ss=otherside_neighbors_squares)
-        no_queen = otherside_neighbors != -self.player * QUEEN
+        no_queen = otherside_neighbors != self.opponent * QUEEN
         has_orthogonal_dir = s0ks_uv[~current_unpin_mask] == 0
         is_orthogonal = has_orthogonal_dir[..., 0] | has_orthogonal_dir[..., 1]
-        no_rooks = otherside_neighbors[is_orthogonal] != -self.player * ROOK
-        no_bishops = otherside_neighbors[~is_orthogonal] != -self.player * BISHOP
+        no_rooks = otherside_neighbors[is_orthogonal] != self.opponent * ROOK
+        no_bishops = otherside_neighbors[~is_orthogonal] != self.opponent * BISHOP
         mask_no_pinning = no_queen
         mask_no_pinning[is_orthogonal] &= no_rooks
         mask_no_pinning[~is_orthogonal] &= no_bishops
@@ -546,7 +546,7 @@ class ArrayJudge(Judge):
             ss=self.neighbor_squares(s=s, ds=np.array([sk_uv, -sk_uv]))
         )
         if kingside_neigh != self.king or np.isin(
-            otherside_neigh, np.array([5, 4 if 0 in sk_uv else 3]) * -self.player, invert=True
+            otherside_neigh, np.array([5, 4 if 0 in sk_uv else 3]) * self.opponent, invert=True
         ):
             return np.ones(shape=ds.shape[0], dtype=np.bool_)
         # 3. Otherwise, only directions along the sk-vector are not pinned.
@@ -736,7 +736,7 @@ class ArrayJudge(Judge):
     def pieces_belong_to_opponent(
         self, ps: Union[np.int8, np.ndarray]
     ) -> Union[np.bool_, np.ndarray]:
-        return np.sign(ps) == self.player * -1
+        return np.sign(ps) == self.opponent
 
     @property
     def is_dead_position(self):
