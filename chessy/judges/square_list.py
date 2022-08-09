@@ -45,6 +45,12 @@ class ArrayJudge(Judge):
         self.is_draw: bool = False
         self._valid_moves: Moves = None
         self.analyze_state()
+        # If the BoardState is faulty, so that the opponent has been checkmated already in current
+        # player's last move, now capturing opponent's king would be in current player's moves.
+        opp_king_pos = self.squares_of_piece(p=self.opponent * KING)
+        move_captures_king = np.all(self._valid_moves.s1s == opp_king_pos, axis=1)
+        if np.any(move_captures_king):
+            raise GameOverError(code=1)
         return
 
     @property
