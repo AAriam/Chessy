@@ -88,6 +88,7 @@ class ArrayJudge(Judge):
         """
         return self._is_draw
 
+    @property
     def is_check(self) -> bool:
         """
         Whether the current player is in check.
