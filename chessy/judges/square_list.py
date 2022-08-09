@@ -68,6 +68,49 @@ class ArrayJudge(Judge):
     def valid_moves(self) -> Moves:
         return deepcopy(self._valid_moves)
 
+    @property
+    def opponent(self):
+        return self.player * -1
+
+    @property
+    def occupied_squares(self):
+        return np.argwhere(self.board != NULL)
+
+    @property
+    def squares_of_player(self):
+        return np.argwhere(np.sign(self.board) == self.player)
+
+    @property
+    def move_is_promotion(self) -> bool:
+        return
+
+    @property
+    def board_is_checkmate(self) -> bool:
+        return
+
+    @property
+    def board_is_draw(self) -> bool:
+        return
+
+    @property
+    def game_over(self) -> bool:
+        return self.board_is_checkmate or self.board_is_draw
+
+    def player_is_checked(self) -> bool:
+        pass
+
+    @property
+    def is_dead_position(self):
+        return
+
+    @property
+    def pos_king(self):
+        return self.squares_of_piece(self.king)[0]
+
+    @property
+    def king(self):
+        return self.player * KING
+
     def submit_move(self, move: Move) -> NoReturn:
         move_vect = move.s1 - move.s0
         piece = self.pieces_in_squares(ss=move.s0)
@@ -175,6 +218,61 @@ class ArrayJudge(Judge):
         )
         pps = np.concatenate([pps, np.zeros(sum(move_counts[1:]), dtype=np.int8)])
         return Moves(s0s=np.concatenate(s0s), s1s=np.concatenate(s1s), ps=ps, pps=pps)
+
+    def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
+        # Initialize empty list to accumulate different moves
+        s0s_all, s1s_all, ps_all, pps_all = [], [], [], []
+        # Get king moves and add to lists
+        s0s_k, s1s_k = self.generate_king_moves()
+        ps_k = np.ones(shape=s0s_k.shape[0], dtype=np.int8) * self.player * KING
+        pps_k = np.zeros(shape=s0s_k.shape[0], dtype=np.int8)
+        s0s_all.append(s0s_k)
+        s1s_all.append(s1s_k)
+        ps_all.append(ps_k)
+        pps_all.append(pps_k)
+        # In case of single checks, also get the moves that capture or block the checking piece.
+        if ss_checking_king.shape[0] == 1:
+            s0s_c, s1s_c, ps_c, pps_c = self.generate_targeted_moves(
+                s1=ss_checking_king[0], mode="attacking"
+            )
+            s0s_all.append(s0s_c)
+            s1s_all.append(s1s_c)
+            ps_all.append(ps_c)
+            pps_all.append(pps_c)
+            # Get the square in between the checking piece and king
+            for s_between_king_checker in self.squares_in_between(
+                s0=ss_checking_king[0], s1=self.pos_king
+            ):
+                s0s_a, s1s_a, ps_a, pps_a = self.generate_targeted_moves(
+                    s1=s_between_king_checker, mode="advancing"
+                )
+                s0s_all.append(s0s_a)
+                s1s_all.append(s1s_a)
+                ps_all.append(ps_a)
+                pps_all.append(pps_a)
+        return Moves(
+            s0s=np.concatenate(s0s_all),
+            s1s=np.concatenate(s1s_all),
+            ps=np.concatenate(ps_all),
+            pps=np.concatenate(pps_all)
+        )
+
+    def generate_targeted_moves(self, s1: np.ndarray, mode: str):
+        # Get the squares that can capture the checking piece,
+        s0s = self.squares_leading_to(s=s1, p=self.player, status=mode)
+        ps = self.pieces_in_squares(ss=s0s)
+        # If the end-square is not on the promotion rank of current player,
+        # then no promotion is possible
+        if not self.mask_ss_non_p_rank(ss=s1):
+            pps = np.zeros(s0s.shape[0], dtype=np.int8)
+        else:
+            # Otherwise, check for possible promotions; all capturing pawns will be promoted
+            mask_nopromo_s0s = ps == self.player
+            # Create repetition count array to generate promotion moves
+            reps_for_promotion, pps = self.create_promotion_data(mask_no_promo=mask_nopromo_s0s)
+            s0s = np.repeat(s0s, reps_for_promotion, axis=0)
+            ps = np.repeat(ps, reps_for_promotion)
+        return s0s, np.tile(s1, reps=s0s.shape[0]).reshape(-1, 2), ps, pps
 
     def generate_big_piece_moves(self, p: int) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -541,18 +639,6 @@ class ArrayJudge(Judge):
     def squares_of_piece(self, p: int):
         return np.argwhere(self.board == p)
 
-    @property
-    def opponent(self):
-        return self.player * -1
-
-    @property
-    def occupied_squares(self):
-        return np.argwhere(self.board != NULL)
-
-    @property
-    def squares_of_player(self):
-        return np.argwhere(np.sign(self.board) == self.player)
-
     def squares_belong_to_player(self, ss: np.ndarray) -> bool:
         """
         Whether a given square has a piece on it belonging to the player in turn.
@@ -583,18 +669,6 @@ class ArrayJudge(Judge):
         self, ps: Union[np.int8, np.ndarray]
     ) -> Union[np.bool_, np.ndarray]:
         return np.sign(ps) == self.opponent
-
-    @property
-    def is_dead_position(self):
-        return
-
-    @property
-    def pos_king(self):
-        return self.squares_of_piece(self.king)[0]
-
-    @property
-    def king(self):
-        return self.player * KING
 
     def mask_ss_non_p_rank(self, ss: np.ndarray) -> np.ndarray:
         """
@@ -635,25 +709,6 @@ class ArrayJudge(Judge):
             leading to promotion.
         """
         return ss[..., 0] == RANK_PROMOTION[self.player]
-
-    @property
-    def move_is_promotion(self) -> bool:
-        return
-
-    @property
-    def board_is_checkmate(self) -> bool:
-        return
-
-    @property
-    def board_is_draw(self) -> bool:
-        return
-
-    @property
-    def game_over(self) -> bool:
-        return self.board_is_checkmate or self.board_is_draw
-
-    def player_is_checked(self) -> bool:
-        pass
 
     def squares_in_between(self, s0: np.ndarray, s1: np.ndarray) -> np.ndarray:
         """
@@ -779,59 +834,3 @@ class ArrayJudge(Judge):
             return move_abs[0] == move_abs[1] or np.isin(0, move_abs)
         elif piece_type == KING:
             return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
-
-    def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
-        # Initialize empty list to accumulate different moves
-        s0s_all, s1s_all, ps_all, pps_all = [], [], [], []
-        # Get king moves and add to lists
-        s0s_k, s1s_k = self.generate_king_moves()
-        ps_k = np.ones(shape=s0s_k.shape[0], dtype=np.int8) * self.player * KING
-        pps_k = np.zeros(shape=s0s_k.shape[0], dtype=np.int8)
-        s0s_all.append(s0s_k)
-        s1s_all.append(s1s_k)
-        ps_all.append(ps_k)
-        pps_all.append(pps_k)
-        # In case of single checks, also get the moves that capture or block the checking piece.
-        if ss_checking_king.shape[0] == 1:
-            s0s_c, s1s_c, ps_c, pps_c = self.generate_targeted_moves(
-                s1=ss_checking_king[0], mode="attacking"
-            )
-            s0s_all.append(s0s_c)
-            s1s_all.append(s1s_c)
-            ps_all.append(ps_c)
-            pps_all.append(pps_c)
-            # Get the square in between the checking piece and king
-            for s_between_king_checker in self.squares_in_between(
-                s0=ss_checking_king[0], s1=self.pos_king
-            ):
-                s0s_a, s1s_a, ps_a, pps_a = self.generate_targeted_moves(
-                    s1=s_between_king_checker, mode="advancing"
-                )
-                s0s_all.append(s0s_a)
-                s1s_all.append(s1s_a)
-                ps_all.append(ps_a)
-                pps_all.append(pps_a)
-        return Moves(
-            s0s=np.concatenate(s0s_all),
-            s1s=np.concatenate(s1s_all),
-            ps=np.concatenate(ps_all),
-            pps=np.concatenate(pps_all)
-        )
-
-    def generate_targeted_moves(self, s1: np.ndarray, mode: str):
-        # Get the squares that can capture the checking piece,
-        s0s = self.squares_leading_to(s=s1, p=self.player, status=mode)
-        ps = self.pieces_in_squares(ss=s0s)
-        # If the end-square is not on the promotion rank of current player,
-        # then no promotion is possible
-        if not self.mask_ss_non_p_rank(ss=s1):
-            pps = np.zeros(s0s.shape[0], dtype=np.int8)
-        else:
-            # Otherwise, check for possible promotions; all capturing pawns will be promoted
-            mask_nopromo_s0s = ps == self.player
-            # Create repetition count array to generate promotion moves
-            reps_for_promotion, pps = self.create_promotion_data(mask_no_promo=mask_nopromo_s0s)
-            s0s = np.repeat(s0s, reps_for_promotion, axis=0)
-            ps = np.repeat(ps, reps_for_promotion)
-        return s0s, np.tile(s1, reps=s0s.shape[0]).reshape(-1, 2), ps, pps
-
