@@ -22,27 +22,27 @@ class ArrayJudge(Judge):
     Attributes
     ----------
 
-    board : numpy.ndarray
+    _board : numpy.ndarray
 
-    castling_rights : dict[int, numpy.ndarray]
+    _castling_rights : dict[int, numpy.ndarray]
         First element is a dummy element, so that `self._can_castle[self._turn]`
         gives the castling list of current player
     """
 
     def __init__(self, initial_state: BoardState):
-        self.board: np.ndarray = initial_state.board.copy()
-        self.castling_rights: dict = initial_state.castling_rights.copy()
-        self.player: np.int8 = initial_state.player
-        self.fifty_move_count: np.int8 = initial_state.fifty_move_count
-        self.enpassant_file: np.int8 = initial_state.enpassant_file
-        self.ply_count: np.int16 = initial_state.ply_count
+        self._board: np.ndarray = initial_state.board.copy()
+        self._castling_rights: dict = initial_state.castling_rights.copy()
+        self._player: np.int8 = initial_state.player
+        self._fifty_move_count: np.int8 = initial_state.fifty_move_count
+        self._enpassant_file: np.int8 = initial_state.enpassant_file
+        self._ply_count: np.int16 = initial_state.ply_count
 
-        self.empty_array_squares = np.array([], dtype=np.int8).reshape(0, 2)
-        self._empty_move: tuple = (self.empty_array_squares, self.empty_array_squares)
+        self._empty_array_squares = np.array([], dtype=np.int8).reshape(0, 2)
+        self._empty_move: tuple = (self._empty_array_squares, self._empty_array_squares)
 
-        self.is_checkmate: bool = False
-        self.is_check: bool = False
-        self.is_draw: bool = False
+        self._is_checkmate: bool = False
+        self._is_check: bool = False
+        self._is_draw: bool = False
         self._valid_moves: Moves = None
         self.analyze_state()
         # If the BoardState is faulty, so that the opponent has been checkmated already in current
@@ -55,49 +55,73 @@ class ArrayJudge(Judge):
 
     @property
     def current_state(self) -> BoardState:
+        """
+        Current board-state as a `BoardState` object.
+        """
         return BoardState(
-            board=self.board.copy(),
-            castling_rights=self.castling_rights.copy(),
+            board=self._board.copy(),
+            castling_rights=self._castling_rights.copy(),
             player=self.player,
-            enpassant_file=self.enpassant_file,
-            fifty_move_count=self.fifty_move_count,
-            ply_count=self.ply_count,
+            enpassant_file=self._enpassant_file,
+            fifty_move_count=self._fifty_move_count,
+            ply_count=self._ply_count,
         )
 
     @property
     def valid_moves(self) -> Moves:
+        """
+        All valid moves available to the current player in the current state.
+        """
         return deepcopy(self._valid_moves)
 
     @property
-    def opponent(self):
+    def is_checkmate(self) -> bool:
+        """
+        Whether the current player is checkmated in the current state.
+        """
+        return self._is_checkmate
+
+    @property
+    def is_draw(self) -> bool:
+        """
+        Whether the current state is a draw.
+        """
+        return self._is_draw
+
+    def is_check(self) -> bool:
+        """
+        Whether the current player is in check.
+        """
+        return self._is_check
+
+    @property
+    def player(self) -> np.int8:
+        """
+        ID of the current player.
+        """
+        return self._player
+
+    @property
+    def opponent(self) -> np.int8:
+        """
+        ID of the current player's opponent.
+        """
         return self.player * -1
 
     @property
-    def occupied_squares(self):
-        return np.argwhere(self.board != NULL)
+    def occupied_squares(self) -> np.ndarray:
+        """
+        Coordinates of all non-empty squares on the board in the current state.
+        """
+        return np.argwhere(self._board != NULL)
 
     @property
     def squares_of_player(self):
-        return np.argwhere(np.sign(self.board) == self.player)
+        return np.argwhere(np.sign(self._board) == self.player)
 
     @property
     def move_is_promotion(self) -> bool:
         return
-
-    @property
-    def board_is_checkmate(self) -> bool:
-        return
-
-    @property
-    def board_is_draw(self) -> bool:
-        return
-
-    @property
-    def game_over(self) -> bool:
-        return self.board_is_checkmate or self.board_is_draw
-
-    def player_is_checked(self) -> bool:
-        pass
 
     @property
     def is_dead_position(self):
@@ -142,54 +166,53 @@ class ArrayJudge(Judge):
         moving_piece_type = self.piece_types(piece_at_end_square)
         captured_piece = self.pieces_in_squares(ss=move.s1)
         if captured_piece != NULL:
-            self.fifty_move_count = -1
+            self._fifty_move_count = -1
         move_vec = move.s1 - move.s0
         move_vec_mag = np.abs(move_vec)
         if moving_piece_type == PAWN:
             # Handle promotions and en passant
-            self.fifty_move_count = -1
+            self._fifty_move_count = -1
             if move.pp != NULL:
                 piece_at_end_square = move.pp
             if np.all(move_vec_mag == [1, 1]) and captured_piece == 0:
-                self.board[move.s1[0] - self.player, move.s1[1]] = 0
-            self.enpassant_file = move.s1[1] if move_vec_mag[0] == 2 else -1
+                self._board[move.s1[0] - self.player, move.s1[1]] = 0
+            self._enpassant_file = move.s1[1] if move_vec_mag[0] == 2 else -1
         else:
-            self.enpassant_file = -1
+            self._enpassant_file = -1
             # Apply castling and/or modify castling rights
             if moving_piece_type == KING:
-                self.castling_rights[self.player] = dict.fromkeys(
-                    self.castling_rights[self.player], False
+                self._castling_rights[self.player] = dict.fromkeys(
+                    self._castling_rights[self.player], False
                 )
                 if move_vec_mag[1] == 2:
-                    self.board[ROOK_S_INIT[self.player][move_vec[1]]] = 0
-                    self.board[ROOK_S_END[self.player][move_vec[1]]] = self.player * ROOK
+                    self._board[ROOK_S_INIT[self.player][move_vec[1]]] = 0
+                    self._board[ROOK_S_END[self.player][move_vec[1]]] = self.player * ROOK
             elif moving_piece_type == ROOK:
                 for side, pos in ROOK_S_INIT[self.player].items():
                     if np.all(move.s0 == pos):
-                        self.castling_rights[self.player][side] = False
-        self.board[tuple(move.s1)] = piece_at_end_square
-        self.board[tuple(move.s0)] = 0
-        self.fifty_move_count += 1
-        self.is_check = False
-        self.player *= -1
+                        self._castling_rights[self.player][side] = False
+        self._board[tuple(move.s1)] = piece_at_end_square
+        self._board[tuple(move.s0)] = 0
+        self._fifty_move_count += 1
+        self._is_check = False
+        self._player *= -1
         self.analyze_state()
         return
 
     def analyze_state(self):
-        if self.fifty_move_count == 100 or self.is_dead_position:
-            self.is_draw = True
-            self._valid_moves = []
+        if self._fifty_move_count == 100 or self.is_dead_position:
+            self._is_draw = True
         else:
             checking_squares = self.squares_leading_to()
             if checking_squares.size != 0:
-                self.is_check = True
+                self._is_check = True
                 valid_moves = self.generate_valid_moves_checked(ss_checking_king=checking_squares)
                 if not valid_moves:
-                    self.is_checkmate = True
+                    self._is_checkmate = True
             else:
                 valid_moves = self.generate_valid_moves_unchecked()
                 if not valid_moves:
-                    self.is_draw = True
+                    self._is_draw = True
             self._valid_moves = valid_moves
         return
 
@@ -426,7 +449,7 @@ class ArrayJudge(Judge):
         s1s_inboard = s1s_normal[ArrayJudge.squares_are_inside_board(ss=s1s_normal)]
         s1s_vacant = s1s_inboard[~self.squares_belong_to_player(ss=s1s_inboard)]
         s1s_final = s1s_vacant[self.king_wont_be_attacked(ss=s1s_vacant)]
-        player_castling_rights = np.array(list(self.castling_rights[self.player].values()))
+        player_castling_rights = np.array(list(self._castling_rights[self.player].values()))
         if not self.is_check and np.any(player_castling_rights):
             vacant = self.squares_are_empty(ss=CASTLING_SS_EMPTY[self.player])
             mask_vacant = [np.all(vacant[:3]), np.all(vacant[3:])]
@@ -439,14 +462,14 @@ class ArrayJudge(Judge):
 
     def king_wont_be_attacked(self, ss: np.ndarray):
         king_pos = tuple(self.pos_king)
-        self.board[king_pos] = 0  # temporarily remove king from board
+        self._board[king_pos] = 0  # temporarily remove king from board
         square_is_not_attacked = []
         for square in ss:
             piece_in_square = self.pieces_in_squares(ss=square)
-            self.board[tuple(square)] = 0  # temporarily remove the piece from the square
+            self._board[tuple(square)] = 0  # temporarily remove the piece from the square
             square_is_not_attacked.append(self.squares_leading_to(s=square).size == 0)
-            self.board[tuple(square)] = piece_in_square  # put the piece back
-        self.board[king_pos] = self.king  # put the king back
+            self._board[tuple(square)] = piece_in_square  # put the piece back
+        self._board[king_pos] = self.king  # put the king back
         return np.array(square_is_not_attacked, dtype=np.bool_)
 
     def squares_leading_to(
@@ -592,11 +615,11 @@ class ArrayJudge(Judge):
         )
 
     def is_enpassant_square(self, ss):
-        return np.all(ss == [RANK_ENPASSANT_END[self.player], self.enpassant_file], axis=-1)
+        return np.all(ss == [RANK_ENPASSANT_END[self.player], self._enpassant_file], axis=-1)
 
     def pawn_can_capture_square(self, s1):
         can_capture_enpassant = np.all(
-            s1 == [RANK_ENPASSANT_END[self.player], self.enpassant_file]
+            s1 == [RANK_ENPASSANT_END[self.player], self._enpassant_file]
         )
         can_capture_normal = self.squares_are_inside_board(
             ss=s1
@@ -612,7 +635,7 @@ class ArrayJudge(Judge):
         side : int
             +1 for kingside, -1 for queenside.
         """
-        return self.castling_rights[self.player][side]
+        return self._castling_rights[self.player][side]
 
     def pieces_in_squares(self, ss: np.ndarray) -> Union[np.ndarray, np.int8]:
         """
@@ -632,12 +655,12 @@ class ArrayJudge(Judge):
             Piece types as a single integer (when `ss` is 1-dimensional) or a 1d-array of size n.
         """
         if ss.size > 1:
-            return self.board[ss[..., 0], ss[..., 1]]
+            return self._board[ss[..., 0], ss[..., 1]]
         else:
             return np.array([], dtype=np.int8)
 
     def squares_of_piece(self, p: int):
-        return np.argwhere(self.board == p)
+        return np.argwhere(self._board == p)
 
     def squares_belong_to_player(self, ss: np.ndarray) -> bool:
         """
@@ -729,7 +752,7 @@ class ArrayJudge(Judge):
         """
         move_v, move_uv, move_vm, is_cardinal = ArrayJudge.move_dir_mag(s0s=s0, s1s=s1)
         if not is_cardinal:
-            return self.empty_array_squares
+            return self._empty_array_squares
         return s0 + np.arange(1, move_vm, dtype=np.int8)[:, np.newaxis] * move_uv
 
     @staticmethod
