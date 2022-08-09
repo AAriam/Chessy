@@ -339,52 +339,52 @@ class ArrayJudge(Judge):
             s1s_final = np.concatenate((s1s_final.reshape(-1, 2), s1s_final_castle.reshape(-1, 2)))
         return np.tile(self.pos_king, reps=s1s_final.shape[0]).reshape(-1, 2), s1s_final
 
-    def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
-        # Get the squares the king can move into to resolve check.
-        king_moves = self.generate_king_moves()
-        s0s = king_moves[0]
-        s1s = king_moves[1]
-        ps = np.ones(king_moves[0].shape[0], dtype=np.int8) * 6 * self.player
-        # In case of single checks, get the moves that block or capture the attacking piece.
-        if ss_checking_king.shape[0] == 1:
-            # Find capturing moves
-            ss_attacking_checker = self.squares_leading_to(
-                s=ss_checking_king[0], p=self.player, status="attacking"
-            )
-            ps_attacking_checker = self.pieces_in_squares(ss=ss_attacking_checker)
-            s1s_attacking_checker = np.tile(
-                ss_checking_king[0], reps=ss_attacking_checker.size // 2
-            ).reshape(-1, 2)
-
-            # Find blocking moves
-            s0s_advancing = []
-            s1s_advancing = []
-            ss_between_king_checker = self.squares_in_between(
-                s0=ss_checking_king[0], s1=self.pos_king
-            )
-            for s_between_king_checker in ss_between_king_checker:
-                ss_advancing = self.squares_leading_to(
-                    s=s_between_king_checker, p=self.player, status="advancing"
-                )
-                s0s_advancing.append(ss_advancing)
-                s1s_advancing.append(
-                    np.tile(s_between_king_checker, reps=ss_advancing.size // 2).reshape(-1, 2)
-                )
-            if s0s_advancing:  # If list is not empty
-                s0s_advancing = np.concatenate(s0s_advancing)
-                s1s_advancing = np.concatenate(s1s_advancing)
-                ps_advancing = self.pieces_in_squares(ss=s0s_advancing)
-
-                s0s = np.concatenate([s0s, ss_attacking_checker, s0s_advancing])
-                s1s = np.concatenate(
-                    [
-                        s1s,
-                        s1s_attacking_checker,
-                        s1s_advancing,
-                    ]
-                )
-                ps = np.concatenate([ps, ps_attacking_checker, ps_advancing])
-        return Moves(s0s=s0s, s1s=s1s, ps=ps)
+    # def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
+    #     # Get the squares the king can move into to resolve check.
+    #     king_moves = self.generate_king_moves()
+    #     s0s = king_moves[0]
+    #     s1s = king_moves[1]
+    #     ps = np.ones(king_moves[0].shape[0], dtype=np.int8) * 6 * self.player
+    #     # In case of single checks, get the moves that block or capture the attacking piece.
+    #     if ss_checking_king.shape[0] == 1:
+    #         # Find capturing moves
+    #         ss_attacking_checker = self.squares_leading_to(
+    #             s=ss_checking_king[0], p=self.player, status="attacking"
+    #         )
+    #         ps_attacking_checker = self.pieces_in_squares(ss=ss_attacking_checker)
+    #         s1s_attacking_checker = np.tile(
+    #             ss_checking_king[0], reps=ss_attacking_checker.size // 2
+    #         ).reshape(-1, 2)
+    #
+    #         # Find blocking moves
+    #         s0s_advancing = []
+    #         s1s_advancing = []
+    #         ss_between_king_checker = self.squares_in_between(
+    #             s0=ss_checking_king[0], s1=self.pos_king
+    #         )
+    #         for s_between_king_checker in ss_between_king_checker:
+    #             ss_advancing = self.squares_leading_to(
+    #                 s=s_between_king_checker, p=self.player, status="advancing"
+    #             )
+    #             s0s_advancing.append(ss_advancing)
+    #             s1s_advancing.append(
+    #                 np.tile(s_between_king_checker, reps=ss_advancing.size // 2).reshape(-1, 2)
+    #             )
+    #         if s0s_advancing:  # If list is not empty
+    #             s0s_advancing = np.concatenate(s0s_advancing)
+    #             s1s_advancing = np.concatenate(s1s_advancing)
+    #             ps_advancing = self.pieces_in_squares(ss=s0s_advancing)
+    #
+    #             s0s = np.concatenate([s0s, ss_attacking_checker, s0s_advancing])
+    #             s1s = np.concatenate(
+    #                 [
+    #                     s1s,
+    #                     s1s_attacking_checker,
+    #                     s1s_advancing,
+    #                 ]
+    #             )
+    #             ps = np.concatenate([ps, ps_attacking_checker, ps_advancing])
+    #     return Moves(s0s=s0s, s1s=s1s, ps=ps)
 
     def king_wont_be_attacked(self, ss: np.ndarray):
         king_pos = tuple(self.pos_king)
@@ -994,7 +994,7 @@ class ArrayJudge(Judge):
         #         for p_promo in (np.array([2, 3, 4, 5], dtype=np.int8) if is_promo else [None])
         #     ]
 
-    def checks(self, ss_checking_king: np.ndarray):
+    def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
         # Initialize empty list to accumulate different moves
         s0s_all, s1s_all, ps_all, pps_all = [], [], [], []
         # Get king moves and add to lists
