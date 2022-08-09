@@ -660,15 +660,15 @@ class ArrayJudge(Judge):
         ) and self.squares_belong_to_opponent(ss=s1)
         return can_capture_normal or can_capture_enpassant
 
-    @property
-    def king_move_restriction(self):
-        move_restriction = np.ones(8, dtype=np.int8)
-        move_restriction[[2, -2]] += [
-            self.castling_right(side=1),
-            self.castling_right(side=-1)
-            and self.squares_are_empty(ss=np.array([0 if self.player == 1 else 7, 1])),
-        ]
-        return move_restriction
+    # @property
+    # def king_move_restriction(self):
+    #     move_restriction = np.ones(8, dtype=np.int8)
+    #     move_restriction[[2, -2]] += [
+    #         self.castling_right(side=1),
+    #         self.castling_right(side=-1)
+    #         and self.squares_are_empty(ss=np.array([0 if self.player == 1 else 7, 1])),
+    #     ]
+    #     return move_restriction
 
     def castling_right(self, side: int) -> bool:
         """
