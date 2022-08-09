@@ -171,7 +171,7 @@ class ArrayJudge(Judge):
         ps = np.repeat(
             np.array([PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING], dtype=np.int8), move_counts
         )
-        pps = np.concatenate(pps, np.zeros(sum(move_counts[1:]), dtype=np.int8))
+        pps = np.concatenate([pps, np.zeros(sum(move_counts[1:]), dtype=np.int8)])
         return Moves(s0s=np.concatenate(s0s), s1s=np.concatenate(s1s), ps=ps, pps=pps)
 
     def generate_big_piece_moves(self, p: int) -> tuple[np.ndarray, np.ndarray]:
