@@ -24,7 +24,7 @@ class ArrayJudge(Judge):
 
     board : numpy.ndarray
 
-    castling_rights : numpy.ndarray
+    castling_rights : dict[int, numpy.ndarray]
         First element is a dummy element, so that `self._can_castle[self._turn]`
         gives the castling list of current player
     """
@@ -114,7 +114,9 @@ class ArrayJudge(Judge):
             self.enpassant_file = -1
             # Apply castling and/or modify castling rights
             if moving_piece_type == KING:
-                self.castling_rights[self.player] = dict.fromkeys(self.castling_rights[self.player], False)
+                self.castling_rights[self.player] = dict.fromkeys(
+                    self.castling_rights[self.player], False
+                )
                 if move_vec_mag[1] == 2:
                     self.board[ROOK_S_INIT[self.player][move_vec[1]]] = 0
                     self.board[ROOK_S_END[self.player][move_vec[1]]] = self.player * ROOK
@@ -437,8 +439,6 @@ class ArrayJudge(Judge):
             ss=np.tile(s, 8).reshape(-1, 2), ds=DIRECTIONS * p
         )
         neighbors = self.pieces_in_squares(neighbors_pos)
-        # Set an array of opponent's pieces (intentionally add 0 for easier indexing)
-        opp_pieces = p * np.arange(7, dtype=np.int8)
         # For queen, rook and bishop, if they are in neighbors, then it means they are attacking
         # mask_king = (neighbors == opp_pieces[6]) & (np.abs(neighbors_pos - s).max(axis=1) == 1)
         mask_queen = neighbors == p * QUEEN
@@ -1048,5 +1048,4 @@ class ArrayJudge(Judge):
             s0s = np.repeat(s0s, reps_for_promotion, axis=0)
             ps = np.repeat(ps, reps_for_promotion)
         return s0s, np.tile(s1, reps=s0s.shape[0]).reshape(-1, 2), ps, pps
-
 
