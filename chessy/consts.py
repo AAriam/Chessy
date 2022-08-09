@@ -4,117 +4,125 @@ import numpy as np
 
 
 # Ranks
-RANK_1 = 0
-RANK_2 = 1
-RANK_3 = 2
-RANK_4 = 3
-RANK_5 = 4
-RANK_6 = 5
-RANK_7 = 6
-RANK_8 = 7
+RANK_1 = np.int8(0)
+RANK_2 = np.int8(1)
+RANK_3 = np.int8(2)
+RANK_4 = np.int8(3)
+RANK_5 = np.int8(4)
+RANK_6 = np.int8(5)
+RANK_7 = np.int8(6)
+RANK_8 = np.int8(7)
 
 # Files
-FILE_A = 0
-FILE_B = 1
-FILE_C = 2
-FILE_D = 3
-FILE_E = 4
-FILE_F = 5
-FILE_G = 6
-FILE_H = 7
+FILE_A = np.int8(0)
+FILE_B = np.int8(1)
+FILE_C = np.int8(2)
+FILE_D = np.int8(3)
+FILE_E = np.int8(4)
+FILE_F = np.int8(5)
+FILE_G = np.int8(6)
+FILE_H = np.int8(7)
 
 # Squares
-A1 = (0, 0)
-A2 = (1, 0)
-A3 = (2, 0)
-A4 = (3, 0)
-A5 = (4, 0)
-A6 = (5, 0)
-A7 = (6, 0)
-A8 = (7, 0)
-B1 = (0, 1)
-B2 = (1, 1)
-B3 = (2, 1)
-B4 = (3, 1)
-B5 = (4, 1)
-B6 = (5, 1)
-B7 = (6, 1)
-B8 = (7, 1)
-C1 = (0, 2)
-C2 = (1, 2)
-C3 = (2, 2)
-C4 = (3, 2)
-C5 = (4, 2)
-C6 = (5, 2)
-C7 = (6, 2)
-C8 = (7, 2)
-D1 = (0, 3)
-D2 = (1, 3)
-D3 = (2, 3)
-D4 = (3, 3)
-D5 = (4, 3)
-D6 = (5, 3)
-D7 = (6, 3)
-D8 = (7, 3)
-E1 = (0, 4)
-E2 = (1, 4)
-E3 = (2, 4)
-E4 = (3, 4)
-E5 = (4, 4)
-E6 = (5, 4)
-E7 = (6, 4)
-E8 = (7, 4)
-F1 = (0, 5)
-F2 = (1, 5)
-F3 = (2, 5)
-F4 = (3, 5)
-F5 = (4, 5)
-F6 = (5, 5)
-F7 = (6, 5)
-F8 = (7, 5)
-G1 = (0, 6)
-G2 = (1, 6)
-G3 = (2, 6)
-G4 = (3, 6)
-G5 = (4, 6)
-G6 = (5, 6)
-G7 = (6, 6)
-G8 = (7, 6)
-H1 = (0, 7)
-H2 = (1, 7)
-H3 = (2, 7)
-H4 = (3, 7)
-H5 = (4, 7)
-H6 = (5, 7)
-H7 = (6, 7)
-H8 = (7, 7)
+# generated with:
+# for f, file in enumerate("abcdefgh"):
+#     for r, rank in enumerate(range(1,9)):
+#         print(f"{file.upper()}{rank} = (np.int8({r}), np.int8({f}))")
+A1 = (np.int8(0), np.int8(0))
+A2 = (np.int8(1), np.int8(0))
+A3 = (np.int8(2), np.int8(0))
+A4 = (np.int8(3), np.int8(0))
+A5 = (np.int8(4), np.int8(0))
+A6 = (np.int8(5), np.int8(0))
+A7 = (np.int8(6), np.int8(0))
+A8 = (np.int8(7), np.int8(0))
+B1 = (np.int8(0), np.int8(1))
+B2 = (np.int8(1), np.int8(1))
+B3 = (np.int8(2), np.int8(1))
+B4 = (np.int8(3), np.int8(1))
+B5 = (np.int8(4), np.int8(1))
+B6 = (np.int8(5), np.int8(1))
+B7 = (np.int8(6), np.int8(1))
+B8 = (np.int8(7), np.int8(1))
+C1 = (np.int8(0), np.int8(2))
+C2 = (np.int8(1), np.int8(2))
+C3 = (np.int8(2), np.int8(2))
+C4 = (np.int8(3), np.int8(2))
+C5 = (np.int8(4), np.int8(2))
+C6 = (np.int8(5), np.int8(2))
+C7 = (np.int8(6), np.int8(2))
+C8 = (np.int8(7), np.int8(2))
+D1 = (np.int8(0), np.int8(3))
+D2 = (np.int8(1), np.int8(3))
+D3 = (np.int8(2), np.int8(3))
+D4 = (np.int8(3), np.int8(3))
+D5 = (np.int8(4), np.int8(3))
+D6 = (np.int8(5), np.int8(3))
+D7 = (np.int8(6), np.int8(3))
+D8 = (np.int8(7), np.int8(3))
+E1 = (np.int8(0), np.int8(4))
+E2 = (np.int8(1), np.int8(4))
+E3 = (np.int8(2), np.int8(4))
+E4 = (np.int8(3), np.int8(4))
+E5 = (np.int8(4), np.int8(4))
+E6 = (np.int8(5), np.int8(4))
+E7 = (np.int8(6), np.int8(4))
+E8 = (np.int8(7), np.int8(4))
+F1 = (np.int8(0), np.int8(5))
+F2 = (np.int8(1), np.int8(5))
+F3 = (np.int8(2), np.int8(5))
+F4 = (np.int8(3), np.int8(5))
+F5 = (np.int8(4), np.int8(5))
+F6 = (np.int8(5), np.int8(5))
+F7 = (np.int8(6), np.int8(5))
+F8 = (np.int8(7), np.int8(5))
+G1 = (np.int8(0), np.int8(6))
+G2 = (np.int8(1), np.int8(6))
+G3 = (np.int8(2), np.int8(6))
+G4 = (np.int8(3), np.int8(6))
+G5 = (np.int8(4), np.int8(6))
+G6 = (np.int8(5), np.int8(6))
+G7 = (np.int8(6), np.int8(6))
+G8 = (np.int8(7), np.int8(6))
+H1 = (np.int8(0), np.int8(7))
+H2 = (np.int8(1), np.int8(7))
+H3 = (np.int8(2), np.int8(7))
+H4 = (np.int8(3), np.int8(7))
+H5 = (np.int8(4), np.int8(7))
+H6 = (np.int8(5), np.int8(7))
+H7 = (np.int8(6), np.int8(7))
+H8 = (np.int8(7), np.int8(7))
 
 # Pieces
-NULL = 0
-PAWN = 1
-KNIGHT = 2
-BISHOP = 3
-ROOK = 4
-QUEEN = 5
-KING = 6
+NULL = np.int8(0)
+PAWN = np.int8(1)
+KNIGHT = np.int8(2)
+BISHOP = np.int8(3)
+ROOK = np.int8(4)
+QUEEN = np.int8(5)
+KING = np.int8(6)
 
 # Players
-WHITE = 1
-BLACK = -1
+WHITE = np.int8(1)
+BLACK = np.int8(-1)
 
 # Castling
-QUEENSIDE = -2
-KINGSIDE = 2
+QUEENSIDE = np.int8(-2)
+KINGSIDE = np.int8(2)
+CASTLING_RIGHTS_DEFAULT = {
+    WHITE: {QUEENSIDE: True, KINGSIDE: True},
+    BLACK: {QUEENSIDE: True, KINGSIDE: True}
+}
 
 # Directions
-TOP = [1, 0]
-TOP_RIGHT = [1, 1]
-RIGHT = [0, 1]
-BOTTOM_RIGHT = [-1, 1]
-BOTTOM = [-1, 0]
-BOTTOM_LEFT = [-1, -1]
-LEFT = [0, -1]
-TOP_LEFT = [1, -1]
+TOP = [np.int8(1), np.int8(0)]
+TOP_RIGHT = [np.int8(1), np.int8(1)]
+RIGHT = [np.int8(0), np.int8(1)]
+BOTTOM_RIGHT = [np.int8(-1), np.int8(1)]
+BOTTOM = [np.int8(-1), np.int8(0)]
+BOTTOM_LEFT = [np.int8(-1), np.int8(-1)]
+LEFT = [np.int8(0), np.int8(-1)]
+TOP_LEFT = [np.int8(1), np.int8(-1)]
 DIRECTIONS_ORTHO = np.array([TOP, RIGHT, BOTTOM, LEFT], dtype=np.int8)
 DIRECTIONS_DIAG = np.array([TOP_RIGHT, BOTTOM_RIGHT, BOTTOM_LEFT, TOP_LEFT], dtype=np.int8)
 DIRECTIONS = np.array(
