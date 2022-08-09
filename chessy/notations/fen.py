@@ -2,6 +2,7 @@ import numpy as np
 
 from ..board_representation import BoardState
 from . import mappings
+from ..consts import WHITE, BLACK, KINGSIDE, QUEENSIDE
 
 
 def to_boardstate(record: str) -> BoardState:
@@ -52,7 +53,7 @@ def to_boardstate(record: str) -> BoardState:
             if square.isnumeric():
                 board[-1].extend([0] * int(square))
             else:
-                color = 1 if square.isupper() else -1
+                color = WHITE if square.isupper() else BLACK
                 try:
                     board[-1].append(color * mappings.PIECE_LETTERS[square.upper()])
                 except KeyError:
@@ -62,24 +63,27 @@ def to_boardstate(record: str) -> BoardState:
     # 2. Active Color
     # "w" means that White is to move; "b" means that Black is to move.
     if active_color == "w":
-        turn = 1
+        player = WHITE
     elif active_color == "b":
-        turn = -1
+        player = BLACK
     else:
         raise ValueError(f"Active color must be either 'w' or 'b'; got {active_color}.")
     # 3. Castling Availability
     # If neither side has the ability to castle, this field uses the character "-".
     # Otherwise, it contains one or more letters:
     # Uppercase for white, lowercase for black; 'k' for kingside, 'q' for queenside.
-    castling_stats = [[0, 0], [0, 0]]
+    castling_rights = {
+        WHITE: {QUEENSIDE: False, KINGSIDE: False},
+        BLACK: {QUEENSIDE: False, KINGSIDE: False}
+    }
     for avail in castling_avail:
-        idx = 0 if avail.isupper() else 1
+        player_ = WHITE if avail.isupper() else BLACK
         if avail == "-":
             break
         elif avail.upper() == "K":
-            castling_stats[idx][0] = 1
+            castling_rights[player_][KINGSIDE] = True
         elif avail.upper() == "Q":
-            castling_stats[idx][1] = 1
+            castling_rights[player_][QUEENSIDE] = True
         else:
             raise ValueError(f"Castling availability field unrecognized; got {avail}")
     # 4. En passant target square
@@ -113,13 +117,13 @@ def to_boardstate(record: str) -> BoardState:
     except ValueError:
         raise ValueError(f"Fullmove number must be an integer; got {fullmove_num}.")
     if 1 <= fullmove_num <= 5899:
-        ply_count = (fullmove_num - 1) * 2 + (1 if turn == -1 else 0)
+        ply_count = (fullmove_num - 1) * 2 + (1 if player == BLACK else 0)
     else:
         raise ValueError(f"Fullmove number must be between 1 and 5899; got {fullmove_num}.")
     return BoardState(
         board=np.array(board, dtype=np.int8),
-        castling_rights=np.array(castling_stats, dtype=np.bool_),
-        player=np.int8(turn),
+        castling_rights=castling_rights,
+        player=np.int8(player),
         enpassant_file=np.int8(enpassant_file),
         fifty_move_count=np.int8(fifty_move_count),
         ply_count=np.int16(ply_count),
