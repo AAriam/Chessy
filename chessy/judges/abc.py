@@ -86,8 +86,46 @@ class Judge(ABC):
 
 
 class IllegalMoveError(Exception):
-    pass
+    CODES = {
+        0: "Start-square is out of board.",
+        1: "Start-square is empty.",
+        2: "It is {player_name}'s turn.",
+        3: "End-square is out of board.",
+        4: "Start and end-square are the same.",
+        5: "{piece_name}s cannot move in direction {move_vect}.",
+        6: "Move does not resolve check.",
+        7: "Submitted move is illegal.",
+    }
+
+    def __init__(
+            self, code: int,
+            player: Optional[int] = None,
+            piece_type: Optional[int] = None,
+            move_vect: Optional[np.ndarray] = None
+    ):
+        self.code = code
+        kwargs = dict()
+        if player is not None:
+            kwargs["player_name"] = COLOR[player].name
+        if piece_type is not None:
+            kwargs["piece_name"] = PIECE[piece_type].name.capitalize()
+        if move_vect is not None:
+           kwargs["move_vect"] = move_vect
+        self.message = self.CODES[code].format(**kwargs)
+        super().__init__(self.message)
+        return
 
 
 class GameOverError(Exception):
-    pass
+
+    CODES = {
+        1: "Game over. The initial board is faulty; The opponent is already checkmated.",
+        -1: "Game over. Current player is checkmated.",
+        0: "Game over. It is a draw."
+    }
+
+    def __init__(self, code: int):
+        self.code = code
+        self.message = self.CODES[code]
+        super().__init__(self.message)
+        return
