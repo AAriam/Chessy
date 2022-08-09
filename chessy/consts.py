@@ -155,7 +155,7 @@ ROOK_S_END = {
 # correspond to queenside castle, and the next two correspond to kingside castle.
 CASTLING_SS_EMPTY = {
     WHITE: np.array([B1, C1, D1, F1, G1], dtype=np.int8),
-    BLACK: np.array([B8, C8, D8, F8, G1], dtype=np.int8),
+    BLACK: np.array([B8, C8, D8, F8, G8], dtype=np.int8),
 }
 # Squares that must not be under attack for castling to be allowed for each player.
 # First two squares correspond to queenside castle, and the next two to kingside castle.
