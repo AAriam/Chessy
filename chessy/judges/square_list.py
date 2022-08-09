@@ -4,7 +4,7 @@ Array-based judge and move-generator.
 
 # Standard library
 from __future__ import annotations
-from typing import Optional, Sequence, NoReturn, Union, Tuple, Iterable
+from typing import Optional, NoReturn, Union, Tuple
 from copy import deepcopy
 
 # 3rd party
@@ -12,7 +12,7 @@ import numpy as np
 
 # Self
 from .abc import Judge, IllegalMoveError, GameOverError
-from ..board_representation import BoardState, Move, Moves, COLOR, PIECE
+from ..board_representation import BoardState, Move, Moves
 from ..consts import *
 
 
