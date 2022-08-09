@@ -219,7 +219,7 @@ class ArrayJudge(Judge):
         # Calculate back the remaining valid directions
         ds_valid = s1s_valid - s0s_valid
         # Get the coordinates of all neighbors of all remaining start-squares
-        neighbors_pos = self.neighbor_squares_vectorized(ss=s0s_valid, ds=ds_valid)
+        neighbors_pos = self.neighbor_squares(ss=s0s_valid, ds=ds_valid)
         # Get the pieces on those squares
         neighbor_pieces = self.pieces_in_squares(neighbors_pos)
         # Create a shift array (elements 0 or 1) to account for neighbors that belong to the
@@ -440,7 +440,7 @@ class ArrayJudge(Judge):
         mask_knight = self.pieces_in_squares(inboards) == p * KNIGHT
         # 2. CHECK FOR STRAIGHT-LINE ATTACKS (queen, bishop, rook, pawn, king)
         # Get nearest neighbor in each direction
-        neighbors_pos = self.neighbor_squares_vectorized(
+        neighbors_pos = self.neighbor_squares(
             ss=np.tile(s, 8).reshape(-1, 2), ds=DIRECTIONS * p
         )
         neighbors = self.pieces_in_squares(neighbors_pos)
@@ -496,7 +496,7 @@ class ArrayJudge(Judge):
         )
         current_unpin_mask[~current_unpin_mask] = mask_move_along_s0k
 
-        kingside_neighbors_squares = self.neighbor_squares_vectorized(
+        kingside_neighbors_squares = self.neighbor_squares(
             ss=s0s[~current_unpin_mask],
             ds=s0ks_uv[~current_unpin_mask],
         )
@@ -504,7 +504,7 @@ class ArrayJudge(Judge):
         mask_king_protected = kingside_neighbors != self.king
         current_unpin_mask[~current_unpin_mask] = mask_king_protected
 
-        otherside_neighbors_squares = self.neighbor_squares_vectorized(
+        otherside_neighbors_squares = self.neighbor_squares(
             ss=s0s[~current_unpin_mask],
             ds=-s0ks_uv[~current_unpin_mask],
         )
@@ -557,7 +557,7 @@ class ArrayJudge(Judge):
     #     # 3. Otherwise, only directions along the sk-vector are not pinned.
     #     return np.all(ds == sk_uv, axis=1) | np.all(ds == -sk_uv, axis=1)
 
-    def neighbor_squares_vectorized(self, ss, ds):
+    def neighbor_squares(self, ss, ds):
         neighbor_squares = np.zeros(shape=ss.shape, dtype=np.int8)
         next_neighbors_pos = ss + ds
         not_set = np.ones(ss.size // 2, dtype=np.bool_)
@@ -593,49 +593,49 @@ class ArrayJudge(Judge):
             # #not_set[x] = 0
         return neighbor_squares
 
-    def neighbor_squares(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
-        neighbor_positions = []
-        for d in ds:
-            neighbor_positions.append(self.neighbor_square(s=s, d=d))
-        return np.array(neighbor_positions)
-
-    def neighbor_square(self, s: np.ndarray, d: np.ndarray) -> np.ndarray:
-        """
-        Coordinates of the nearest neighbor to a given square, in a given cardinal direction.
-
-        Parameters
-        ----------
-        s : numpy.ndarray(shape=(2,), dtype=np.int8)
-            Coordinates of the square.
-        d : numpy.ndarray(shape=(2,), dtype=np.int8)
-            Direction from that square.
-            For example, `[1, -1]` means top-left (diagonal), and `[1, 0]` means top.
-
-        Returns
-        -------
-        numpy.ndarray
-            Coordinates of the nearest neighbor in the given direction.
-            If the given square is the last square on the board in the given direction, then
-            the coordinates of the square itself is returned. On the other hand, if there is
-            no piece in the given direction (but the square is not the last),
-            then coordinates of the last square in that direction is returned.
-        """
-        # Calculate distance to the nearest relevant edge. For orthogonal directions, this is the
-        # distance to the edge along that direction. For diagonal directions, this is the
-        # minimum of the distance to each of the two edges along that direction.
-        d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
-        # Get the square-indices that lie in that direction, up until the edge
-        squares_along_d = self.squares_in_between(s0=s, s1=s + (d_edge + 1) * d)
-        if squares_along_d.size == 0:
-            return s
-        # Get the corresponding square occupancies.
-        sub_board = self.board[squares_along_d[:, 0], squares_along_d[:, 1]]
-        # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
-        neighbors_idx = np.nonzero(sub_board)[0]
-        # If there are no neighbors in that direction, the index array will be empty. In this case
-        # we return the position of the last empty square in that direction. Otherwise,
-        # the first element corresponds to the index of nearest neighbor in that direction.
-        return squares_along_d[neighbors_idx[0] if neighbors_idx.size != 0 else -1]
+    # def neighbor_squares(self, s: np.ndarray, ds: np.ndarray) -> np.ndarray:
+    #     neighbor_positions = []
+    #     for d in ds:
+    #         neighbor_positions.append(self.neighbor_square(s=s, d=d))
+    #     return np.array(neighbor_positions)
+    #
+    # def neighbor_square(self, s: np.ndarray, d: np.ndarray) -> np.ndarray:
+    #     """
+    #     Coordinates of the nearest neighbor to a given square, in a given cardinal direction.
+    #
+    #     Parameters
+    #     ----------
+    #     s : numpy.ndarray(shape=(2,), dtype=np.int8)
+    #         Coordinates of the square.
+    #     d : numpy.ndarray(shape=(2,), dtype=np.int8)
+    #         Direction from that square.
+    #         For example, `[1, -1]` means top-left (diagonal), and `[1, 0]` means top.
+    #
+    #     Returns
+    #     -------
+    #     numpy.ndarray
+    #         Coordinates of the nearest neighbor in the given direction.
+    #         If the given square is the last square on the board in the given direction, then
+    #         the coordinates of the square itself is returned. On the other hand, if there is
+    #         no piece in the given direction (but the square is not the last),
+    #         then coordinates of the last square in that direction is returned.
+    #     """
+    #     # Calculate distance to the nearest relevant edge. For orthogonal directions, this is the
+    #     # distance to the edge along that direction. For diagonal directions, this is the
+    #     # minimum of the distance to each of the two edges along that direction.
+    #     d_edge = np.where(d == 1, 7 - s, s)[d != 0].min()
+    #     # Get the square-indices that lie in that direction, up until the edge
+    #     squares_along_d = self.squares_in_between(s0=s, s1=s + (d_edge + 1) * d)
+    #     if squares_along_d.size == 0:
+    #         return s
+    #     # Get the corresponding square occupancies.
+    #     sub_board = self.board[squares_along_d[:, 0], squares_along_d[:, 1]]
+    #     # Get indices of non-zero elements (i.e. non-empty squares) in the given direction
+    #     neighbors_idx = np.nonzero(sub_board)[0]
+    #     # If there are no neighbors in that direction, the index array will be empty. In this case
+    #     # we return the position of the last empty square in that direction. Otherwise,
+    #     # the first element corresponds to the index of nearest neighbor in that direction.
+    #     return squares_along_d[neighbors_idx[0] if neighbors_idx.size != 0 else -1]
 
     def pawn_move_restriction(self, s0):
         move_dirs = np.array([[1, 0], [1, 1], [1, -1]], dtype=np.int8) * self.player
