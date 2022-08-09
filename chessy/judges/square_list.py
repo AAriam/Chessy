@@ -945,59 +945,59 @@ class ArrayJudge(Judge):
         elif piece_type == KING:
             return move_manhattan_dist == 1 or (move_manhattan_dist == 2 and move_abs[0] != 2)
 
-    def generate_move_objects(
-        self, s0s: np.ndarray, s1s: np.ndarray, ps: Union[np.int8, np.ndarray]
-    ) -> list[Move]:
-        """
-        Create `Move` objects for a given number of start/end square-pairs for a given piece.
-
-        Parameters
-        ----------
-        s0s : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
-            Coordinates of n start-squares.
-        s1s : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
-            Coordinates of n end-squares.
-        ps : numpy.int8
-            Piece-ID.
-
-        Returns
-        -------
-        list[Move]
-            A list of `Move` objects.
-        """
-        if isinstance(ps, (np.int8, int)):
-            ps = np.ones(shape=s0s.shape[0], dtype=np.int8) * ps
-        mask_no_promotion = (np.abs(ps) == 1) & (s1s[..., 0] == (7 if self.player == 1 else 0))
-        mask_promotion = ~mask_no_promotion
-        move_objs = [
-            Move(s0=s0, s1=s1, p=p)
-            for s0, s1, p in zip(s0s[mask_promotion], s1s[mask_promotion], ps[mask_promotion])
-        ]
-        for s0, s1, p in zip(
-            s0s[mask_no_promotion], s1s[mask_no_promotion], ps[mask_no_promotion]
-        ):
-            move_objs.extend(
-                [
-                    Move(s0=s0, s1=s1, p=p, p_promo=p_p)
-                    for p_p in np.array([2, 3, 4, 5], dtype=np.int8) * self.player
-                ]
-            )
-        return move_objs
-        # move_objs = []
-        # for (s0, s1, p) in zip(s0s, s1s, ps):
-        #
-        #
-        #
-        # piece_type = np.abs(ps)
-        # if piece_type != 1:
-        #     return [Move(s0=s0, s1=s1, p=ps, p_promo=None) for s0, s1 in zip(s0s, s1s)]
-        # else:
-        #     is_promotion = s1s[..., 0] == (7 if ps == 1 else 0)
-        #     return [
-        #         Move(s0=s0, s1=s1, p=ps, p_promo=p_promo)
-        #         for s0, s1, is_promo in zip(s0s, s1s, is_promotion)
-        #         for p_promo in (np.array([2, 3, 4, 5], dtype=np.int8) if is_promo else [None])
-        #     ]
+    # def generate_move_objects(
+    #     self, s0s: np.ndarray, s1s: np.ndarray, ps: Union[np.int8, np.ndarray]
+    # ) -> list[Move]:
+    #     """
+    #     Create `Move` objects for a given number of start/end square-pairs for a given piece.
+    #
+    #     Parameters
+    #     ----------
+    #     s0s : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
+    #         Coordinates of n start-squares.
+    #     s1s : numpy.ndarray(shape=(n, 2), dtype=numpy.int8)
+    #         Coordinates of n end-squares.
+    #     ps : numpy.int8
+    #         Piece-ID.
+    #
+    #     Returns
+    #     -------
+    #     list[Move]
+    #         A list of `Move` objects.
+    #     """
+    #     if isinstance(ps, (np.int8, int)):
+    #         ps = np.ones(shape=s0s.shape[0], dtype=np.int8) * ps
+    #     mask_no_promotion = (np.abs(ps) == 1) & (s1s[..., 0] == (7 if self.player == 1 else 0))
+    #     mask_promotion = ~mask_no_promotion
+    #     move_objs = [
+    #         Move(s0=s0, s1=s1, p=p)
+    #         for s0, s1, p in zip(s0s[mask_promotion], s1s[mask_promotion], ps[mask_promotion])
+    #     ]
+    #     for s0, s1, p in zip(
+    #         s0s[mask_no_promotion], s1s[mask_no_promotion], ps[mask_no_promotion]
+    #     ):
+    #         move_objs.extend(
+    #             [
+    #                 Move(s0=s0, s1=s1, p=p, p_promo=p_p)
+    #                 for p_p in np.array([2, 3, 4, 5], dtype=np.int8) * self.player
+    #             ]
+    #         )
+    #     return move_objs
+    #     # move_objs = []
+    #     # for (s0, s1, p) in zip(s0s, s1s, ps):
+    #     #
+    #     #
+    #     #
+    #     # piece_type = np.abs(ps)
+    #     # if piece_type != 1:
+    #     #     return [Move(s0=s0, s1=s1, p=ps, p_promo=None) for s0, s1 in zip(s0s, s1s)]
+    #     # else:
+    #     #     is_promotion = s1s[..., 0] == (7 if ps == 1 else 0)
+    #     #     return [
+    #     #         Move(s0=s0, s1=s1, p=ps, p_promo=p_promo)
+    #     #         for s0, s1, is_promo in zip(s0s, s1s, is_promotion)
+    #     #         for p_promo in (np.array([2, 3, 4, 5], dtype=np.int8) if is_promo else [None])
+    #     #     ]
 
     def generate_valid_moves_checked(self, ss_checking_king: np.ndarray) -> Moves:
         # Initialize empty list to accumulate different moves
