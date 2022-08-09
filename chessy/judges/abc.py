@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 
 # Self
-from ..board_representation import BoardState, Move
+from ..board_representation import BoardState, Move, Moves, COLOR, PIECE
 
 
 class Judge(ABC):
@@ -34,7 +34,7 @@ class Judge(ABC):
 
     @property
     @abstractmethod
-    def valid_moves(self) -> list[Move]:
+    def valid_moves(self) -> Moves:
         """
         Generate all valid moves for the current player.
         A move is represented as a new BoardState object.
