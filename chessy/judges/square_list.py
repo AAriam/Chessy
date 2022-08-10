@@ -209,11 +209,11 @@ class ArrayJudge(Judge):
             if checking_squares.size != 0:
                 self._is_check = True
                 valid_moves = self.generate_valid_moves_checked(ss_checking_king=checking_squares)
-                if not valid_moves:
+                if valid_moves.is_empty:
                     self._is_checkmate = True
             else:
                 valid_moves = self.generate_valid_moves_unchecked()
-                if not valid_moves:
+                if valid_moves.is_empty:
                     self._is_draw = True
             self._valid_moves = valid_moves
         return

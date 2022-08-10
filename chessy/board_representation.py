@@ -132,6 +132,10 @@ class Moves(NamedTuple):
         has_all = has_s0 & has_s1 & has_p & has_pps
         return np.any(has_all)
 
+    @property
+    def is_empty(self):
+        return self.s0s.size == 0
+
 
 class Color(NamedTuple):
     name: str
